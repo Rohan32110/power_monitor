@@ -174,10 +174,102 @@ function Legend() {
   )
 }
 
+// ── Floating info card (rendered inside SVG via foreignObject) ────────────────
+interface FloatingCardProps {
+  node: KGNode
+  svgX: number   // position in viewBox coords
+  svgY: number
+  onDismiss: () => void
+}
+
+function FloatingCard({ node, svgX, svgY, onDismiss }: FloatingCardProps) {
+  const cardW = 170
+  const cardH = node.kind === 'office' ? 72 : node.kind === 'room' ? 72 : 96
+  // Clamp card so it stays within viewBox
+  const x = Math.min(Math.max(svgX - cardW / 2, 4), VW - cardW - 4)
+  const y = svgY < VH / 2 ? svgY + 22 : svgY - cardH - 22
+
+  return (
+    <g>
+      {/* arrow connector line */}
+      <line
+        x1={svgX} y1={svgY < VH / 2 ? svgY + 14 : svgY - 14}
+        x2={x + cardW / 2} y2={svgY < VH / 2 ? y : y + cardH}
+        stroke="#6366F1" strokeWidth={1} strokeDasharray="3 2" strokeOpacity={0.5}
+      />
+      <foreignObject x={x} y={y} width={cardW} height={cardH + 8}>
+        <div
+          // @ts-expect-error xmlns needed for SVG foreignObject
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            padding: '10px 12px',
+            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)',
+            fontSize: 11,
+            color: 'var(--foreground)',
+            position: 'relative',
+          }}
+        >
+          {/* dismiss button */}
+          <button
+            onClick={onDismiss}
+            style={{
+              position: 'absolute', top: 6, right: 8,
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--muted-foreground)', fontSize: 14, lineHeight: 1,
+              padding: 0,
+            }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+
+          {/* node name + status badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingRight: 16 }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: node.kind === 'office' ? '#4F46E5'
+                : node.kind === 'room'   ? '#6366F1'
+                : node.status            ? '#22C55E'
+                : '#94A3B8',
+            }} />
+            <span style={{ fontWeight: 600, fontSize: 11, lineHeight: 1.3 }}>{node.label}</span>
+            {node.status !== undefined && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                background: node.status ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)',
+                color: node.status ? '#22C55E' : '#94A3B8',
+              }}>
+                {node.status ? 'ON' : 'OFF'}
+              </span>
+            )}
+          </div>
+
+          {/* detail rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--muted-foreground)' }}>
+            <span>Type: <span style={{ color: 'var(--foreground)', textTransform: 'capitalize' }}>{node.kind}</span></span>
+            {node.room && (
+              <span>Room: <span style={{ color: 'var(--foreground)' }}>{ROOM_LABELS[node.room as RoomId] ?? node.room}</span></span>
+            )}
+            {node.wattage != null && node.status && (
+              <span>Draw: <span style={{ color: 'var(--foreground)', fontFamily: 'monospace' }}>{node.wattage}W</span></span>
+            )}
+            {node.kind === 'office' && (
+              <span style={{ color: 'var(--foreground)' }}>3 rooms · 15 devices</span>
+            )}
+          </div>
+        </div>
+      </foreignObject>
+    </g>
+  )
+}
+
 // ── D3 graph — fixed viewBox, drag + zoom only ────────────────────────────────
 interface GraphProps {
   devices: Device[]
-  onNodeClick: (node: KGNode | null) => void
+  onNodeClick: (node: KGNode | null, svgCoords: { x: number; y: number } | null) => void
 }
 
 function D3Graph({ devices, onNodeClick }: GraphProps) {
@@ -186,6 +278,9 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
   const nodeSelRef = useRef<d3.Selection<SVGGElement, KGNode, SVGGElement, unknown> | null>(null)
   const linkSelRef = useRef<d3.Selection<SVGLineElement, KGLink, SVGGElement, unknown> | null>(null)
   const lblSelRef  = useRef<d3.Selection<SVGTextElement, KGLink, SVGGElement, unknown> | null>(null)
+
+  // Floating card state — managed inside the graph component
+  const [floatCard, setFloatCard] = useState<{ node: KGNode; x: number; y: number } | null>(null)
 
   // Keep a ref to devices so onNodeClick callbacks stay fresh
   const onNodeClickRef = useRef(onNodeClick)
@@ -259,7 +354,14 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .data(nodes, (d) => d.id)
       .join('g')
       .attr('cursor', 'pointer')
-      .on('click', (_e, d) => onNodeClickRef.current(d))
+      .on('click', (e, d) => {
+        // Get the current zoom transform to convert node coords to viewBox coords
+        const transform = d3.zoomTransform(svgRef.current!)
+        const vx = transform.applyX(d.x)
+        const vy = transform.applyY(d.y)
+        setFloatCard((prev) => prev?.node.id === d.id ? null : { node: d, x: vx, y: vy })
+        onNodeClickRef.current(d, { x: vx, y: vy })
+      })
     nodeSelRef.current = nodeSel
 
     // Node: glow ring for ON devices
@@ -343,14 +445,26 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       className="w-full h-full"
       style={{ display: 'block' }}
       aria-label="Office knowledge graph"
-    />
+      onClick={(e) => {
+        // Dismiss card when clicking on empty SVG background
+        if ((e.target as SVGElement).tagName === 'svg') setFloatCard(null)
+      }}
+    >
+      {/* FloatingCard overlaid on top of everything — rendered in React, not D3 */}
+      {floatCard && (
+        <FloatingCard
+          node={floatCard.node}
+          svgX={floatCard.x}
+          svgY={floatCard.y}
+          onDismiss={() => setFloatCard(null)}
+        />
+      )}
+    </svg>
   )
 }
 
 // ── KnowledgeGraphTab ─────────────────────────────────────────────────────────
 export function KnowledgeGraphTab({ devices }: { devices: Device[] }) {
-  const [selectedNode, setSelectedNode] = useState<KGNode | null>(null)
-
   return (
     <div className="flex flex-col gap-0">
       <HeroCard devices={devices} />
@@ -360,47 +474,9 @@ export function KnowledgeGraphTab({ devices }: { devices: Device[] }) {
         className="rounded-xl border border-border bg-card overflow-hidden"
         style={{ height: 360 }}
       >
-        <D3Graph devices={devices} onNodeClick={(n) => setSelectedNode(n)} />
+        {/* D3Graph manages its own floating card state internally */}
+        <D3Graph devices={devices} onNodeClick={() => {}} />
       </div>
-
-      {/* Node detail panel */}
-      {selectedNode && (
-        <div className="mt-4 rounded-xl border border-primary/20 bg-card p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span
-                  className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                  style={{ background: selectedNode.status ? '#22C55E' : '#94A3B8' }}
-                />
-                <h3 className="text-sm font-semibold text-foreground">{selectedNode.label}</h3>
-                {selectedNode.status !== undefined && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded
-                    ${selectedNode.status ? 'bg-on/10 text-on' : 'bg-muted text-muted-foreground'}`}>
-                    {selectedNode.status ? 'ON' : 'OFF'}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                <span>Type: <span className="text-foreground capitalize">{selectedNode.kind}</span></span>
-                {selectedNode.room && (
-                  <span>Room: <span className="text-foreground">{ROOM_LABELS[selectedNode.room as RoomId] ?? selectedNode.room}</span></span>
-                )}
-                {selectedNode.wattage != null && selectedNode.status && (
-                  <span>Draw: <span className="text-foreground font-mono tabular-nums">{selectedNode.wattage}W</span></span>
-                )}
-                <span>ID: <span className="text-foreground font-mono">{selectedNode.id}</span></span>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedNode(null)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

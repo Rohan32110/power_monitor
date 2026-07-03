@@ -102,28 +102,87 @@ function isoBox({ col, row, width, depth, floorFill, leftFill, rightFill, topFil
   return { topPath, leftPath, rightPath, floorFill, leftFill, rightFill, topFill, stroke, opacity }
 }
 
-// ── Device dot indicators on room top face ────────────────────────────────────
-function deviceDots(
+// ── Device icon positions on room top face ────────────────────────────────────
+interface DeviceIcon {
+  x: number
+  y: number
+  type: 'fan' | 'light'
+  on: boolean
+  label: string
+}
+
+function deviceIcons(
   col: number, row: number, width: number, depth: number,
   fans: Device[], lights: Device[]
-): { x: number; y: number; color: string; on: boolean }[] {
-  const dots: { x: number; y: number; color: string; on: boolean }[] = []
+): DeviceIcon[] {
+  const icons: DeviceIcon[] = []
 
-  // Place fan dots along top-left quadrant, lights along right quadrant
-  const allDevices: { d: Device; color: string }[] = [
-    ...fans.map((d) => ({ d, color: '#6366F1' })),
-    ...lights.map((d) => ({ d, color: '#F59E0B' })),
-  ]
-
-  allDevices.forEach((item, i) => {
-    const frac = (i + 0.5) / (allDevices.length || 1)
-    // Place dots along a diagonal within the tile
-    const dc = col + frac * width * 0.7 + 0.15 * width
-    const dr = row + frac * depth * 0.4 + 0.1 * depth
+  // Fans go in left columns, lights in right columns of the top face
+  // Divide top face into a 2×(max) grid
+  fans.forEach((d, i) => {
+    // fans along left strip: col + 0.25*w, staggered rows
+    const fracRow = (i + 0.5) / (fans.length || 1)
+    const dc = col + 0.25 * width
+    const dr = row + fracRow * depth * 0.8 + 0.1 * depth
     const pos = isoProject(dc, dr)
-    dots.push({ x: pos.x, y: pos.y - WALL_H - 4, color: item.color, on: item.d.status })
+    icons.push({ x: pos.x, y: pos.y - WALL_H - 2, type: 'fan', on: d.status, label: `Fan ${d.device_number}` })
   })
-  return dots
+
+  lights.forEach((d, i) => {
+    // lights along right strip: col + 0.72*w, staggered rows
+    const fracRow = (i + 0.5) / (lights.length || 1)
+    const dc = col + 0.68 * width
+    const dr = row + fracRow * depth * 0.8 + 0.1 * depth
+    const pos = isoProject(dc, dr)
+    icons.push({ x: pos.x, y: pos.y - WALL_H - 2, type: 'light', on: d.status, label: `Light ${d.device_number}` })
+  })
+
+  return icons
+}
+
+// ── Fan SVG (3-blade, 14×14 centered at 0,0) ─────────────────────────────────
+function FanIcon({ on }: { on: boolean }) {
+  const color = on ? '#6366F1' : '#3A4560'
+  const opacity = on ? 1 : 0.5
+  return (
+    <g opacity={opacity}>
+      {/* hub */}
+      <circle r={2} fill={color} />
+      {/* 3 blades, each a rounded path rotated 120° */}
+      {[0, 120, 240].map((deg) => (
+        <path
+          key={deg}
+          d="M0 -1.5 C-1.5 -4, -5.5 -4, -5.5 -1.5 C-5.5 0.5, -2.5 1.5, 0 0 Z"
+          fill={color}
+          fillOpacity={0.9}
+          transform={`rotate(${deg})`}
+        />
+      ))}
+    </g>
+  )
+}
+
+// ── Light-bulb SVG (14×16, centered at 0,0) ──────────────────────────────────
+function LightIcon({ on }: { on: boolean }) {
+  const color = on ? '#F59E0B' : '#3A4560'
+  const opacity = on ? 1 : 0.5
+  return (
+    <g opacity={opacity}>
+      {/* glow halo when on */}
+      {on && <circle r={7} fill={color} fillOpacity={0.15} />}
+      {/* bulb body */}
+      <path
+        d="M0 -6 A4.5 4.5 0 0 1 4.5 -1.5 L3 2 L-3 2 L-4.5 -1.5 A4.5 4.5 0 0 1 0 -6 Z"
+        fill={color}
+        fillOpacity={0.85}
+      />
+      {/* base collar */}
+      <rect x="-3" y="2" width="6" height="1.5" rx="0.5" fill={color} fillOpacity={0.7} />
+      <rect x="-2.5" y="3.5" width="5" height="1.5" rx="0.5" fill={color} fillOpacity={0.5} />
+      {/* filament glow when on */}
+      {on && <circle r={1.5} cy={-1} fill="#FEF3C7" fillOpacity={0.9} />}
+    </g>
+  )
 }
 
 interface IsoFloorPlanProps {
@@ -203,7 +262,7 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
 
         const fans   = (byRoom[id] ?? []).filter((d) => d.device_type === 'fan')
         const lights = (byRoom[id] ?? []).filter((d) => d.device_type === 'light')
-        const dots   = deviceDots(col, row, w, d, fans, lights)
+        const icons  = deviceIcons(col, row, w, d, fans, lights)
 
         // Clickable hit area over top face
         const p00 = isoProject(col,     row)
@@ -243,18 +302,13 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
               )
             })}
 
-            {/* Device dots */}
-            {dots.map((dot, i) => (
-              <g key={i}>
-                {dot.on && (
-                  <circle cx={dot.x} cy={dot.y} r={5} fill={dot.color} fillOpacity={0.2} />
-                )}
-                <circle
-                  cx={dot.x} cy={dot.y} r={3.5}
-                  fill={dot.on ? dot.color : '#2A3350'}
-                  stroke={dot.on ? dot.color : '#3A4560'}
-                  strokeWidth={0.8}
-                />
+            {/* Device icons — fan blades + light bulbs */}
+            {icons.map((icon, i) => (
+              <g key={i} transform={`translate(${icon.x}, ${icon.y})`}>
+                {icon.type === 'fan'
+                  ? <FanIcon on={icon.on} />
+                  : <LightIcon on={icon.on} />
+                }
               </g>
             ))}
 
@@ -294,16 +348,19 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
       })}
 
       {/* Legend */}
-      <g transform={`translate(${minX + 4}, ${maxY - 22})`}>
-        {[
-          { color: '#6366F1', label: 'Fan ON' },
-          { color: '#F59E0B', label: 'Light ON' },
-        ].map(({ color, label }, i) => (
-          <g key={label} transform={`translate(${i * 70}, 0)`}>
-            <circle cx={5} cy={0} r={4} fill={color} fillOpacity={0.85} />
-            <text x={12} y={4} fontSize={7} fill="#94A3B8">{label}</text>
-          </g>
-        ))}
+      <g transform={`translate(${minX + 4}, ${maxY - 18})`}>
+        <g transform="translate(0,0)">
+          <g transform="translate(5,0) scale(0.7)"><FanIcon on={true} /></g>
+          <text x={13} y={4} fontSize={7} fill="#94A3B8">Fan ON</text>
+        </g>
+        <g transform="translate(60,0)">
+          <g transform="translate(5,-3) scale(0.7)"><LightIcon on={true} /></g>
+          <text x={13} y={4} fontSize={7} fill="#94A3B8">Light ON</text>
+        </g>
+        <g transform="translate(126,0)">
+          <g transform="translate(5,0) scale(0.7)"><FanIcon on={false} /></g>
+          <text x={13} y={4} fontSize={7} fill="#94A3B8">OFF</text>
+        </g>
       </g>
     </svg>
   )

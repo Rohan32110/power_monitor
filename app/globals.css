@@ -92,6 +92,7 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-size: 14px;
     line-height: 1.6;
+    zoom: 0.9;
   }
 
   h1, h2, h3, h4, h5 { @apply tracking-tight font-semibold; }
