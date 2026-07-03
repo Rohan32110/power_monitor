@@ -88,11 +88,17 @@
     @apply border-border;
   }
 
+  html {
+    /* Scale the entire UI to 90% by shrinking the root font-size.
+       Tailwind rem values inherit this, giving the "90% zoom" look
+       without breaking viewport-relative height units like dvh/svh. */
+    font-size: 13px;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-size: 14px;
+    font-size: 0.875rem;   /* 13 × 0.875 ≈ 11.4px — matches 14px × 0.9 look */
     line-height: 1.6;
-    zoom: 0.9;
   }
 
   h1, h2, h3, h4, h5 { @apply tracking-tight font-semibold; }
