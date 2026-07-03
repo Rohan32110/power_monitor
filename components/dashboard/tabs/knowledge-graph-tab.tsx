@@ -24,17 +24,15 @@ interface KGLink {
 }
 
 // ── Fixed layout constants ─────────────────────────────────────────────────────
-// We use a fixed 900×420 viewBox so positions are always deterministic
 const VW = 900
 const VH = 360
-const CX = VW / 2        // 450
-const CY = VH * 0.44     // 158 — slight upward offset to give bottom rooms room for labels
+const CX = VW / 2
+const CY = VH * 0.44
 
-const ROOM_IDS  = ['drawing_room', 'work_room_1', 'work_room_2'] as const
-// 3 rooms at top, bottom-right, bottom-left — 120° apart starting at top
+const ROOM_IDS    = ['drawing_room', 'work_room_1', 'work_room_2'] as const
 const ROOM_ANGLES = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]
-const ROOM_R  = 100  // distance office→room
-const DEV_R   = 72   // distance room→device
+const ROOM_R      = 100
+const DEV_R       = 72
 
 function getRoomPos(ri: number) {
   const a = ROOM_ANGLES[ri] ?? 0
@@ -42,22 +40,18 @@ function getRoomPos(ri: number) {
 }
 
 function getDevPos(ri: number, di: number, total: number) {
-  const a = ROOM_ANGLES[ri] ?? 0
+  const a  = ROOM_ANGLES[ri] ?? 0
   const rx = CX + ROOM_R * Math.cos(a)
   const ry = CY + ROOM_R * Math.sin(a)
-  // Fan out devices in an arc pointed away from center
-  // Use 100° total spread for 5 devices → 25° step
   const totalSpread = Math.min(Math.PI * 0.72, (total - 1) * 0.36)
   const offset = total > 1 ? (di / (total - 1) - 0.5) * totalSpread : 0
-  const devAngle = a + offset
-  return { x: rx + DEV_R * Math.cos(devAngle), y: ry + DEV_R * Math.sin(devAngle) }
+  return { x: rx + DEV_R * Math.cos(a + offset), y: ry + DEV_R * Math.sin(a + offset) }
 }
 
 function buildGraph(devices: Device[]): { nodes: KGNode[]; links: KGLink[] } {
   const nodeMap = new Map<string, KGNode>()
   const links: KGLink[] = []
 
-  // Office HQ node
   const officeNode: KGNode = { id: 'office', label: 'Office HQ', kind: 'office', x: CX, y: CY }
   nodeMap.set('office', officeNode)
 
@@ -88,7 +82,6 @@ function buildGraph(devices: Device[]): { nodes: KGNode[]; links: KGLink[] } {
   return { nodes: Array.from(nodeMap.values()), links }
 }
 
-// ── Node visual helpers ───────────────────────────────────────────────────────
 function nodeRadius(n: KGNode) {
   if (n.kind === 'office') return 22
   if (n.kind === 'room')   return 15
@@ -106,10 +99,10 @@ function GhostKG() {
   return (
     <svg viewBox="0 0 64 64" fill="none" className="h-full w-full" aria-hidden>
       <circle cx="32" cy="32" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.15" />
-      {[[10,16],[54,16],[10,48],[54,48]].map(([x,y],i) => (
+      {([[10,16],[54,16],[10,48],[54,48]] as [number,number][]).map(([x,y],i) => (
         <circle key={i} cx={x} cy={y} r="4" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
       ))}
-      {[[26,29,14,19],[38,29,50,19],[26,35,14,45],[38,35,50,45]].map(([x1,y1,x2,y2],i) => (
+      {([[26,29,14,19],[38,29,50,19],[26,35,14,45],[38,35,50,45]] as [number,number,number,number][]).map(([x1,y1,x2,y2],i) => (
         <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.2" opacity="0.12" />
       ))}
     </svg>
@@ -168,125 +161,138 @@ function Legend() {
         </div>
       ))}
       <span className="ml-auto text-xs text-muted-foreground hidden sm:block">
-        Drag to move · Scroll to zoom · Click for info
+        Hover a node · Drag to move · Scroll to zoom
       </span>
     </div>
   )
 }
 
-// ── Floating info card (rendered inside SVG via foreignObject) ────────────────
-interface FloatingCardProps {
+// ── Hover tooltip card — positioned in React outside the SVG ──────────────────
+interface TooltipState {
   node: KGNode
-  svgX: number   // position in viewBox coords
-  svgY: number
-  onDismiss: () => void
+  /** Screen-space coordinates (px) relative to the SVG element's bounding box */
+  screenX: number
+  screenY: number
 }
 
-function FloatingCard({ node, svgX, svgY, onDismiss }: FloatingCardProps) {
-  const cardW = 170
-  const cardH = node.kind === 'office' ? 72 : node.kind === 'room' ? 72 : 96
-  // Clamp card so it stays within viewBox
-  const x = Math.min(Math.max(svgX - cardW / 2, 4), VW - cardW - 4)
-  const y = svgY < VH / 2 ? svgY + 22 : svgY - cardH - 22
+interface TooltipProps {
+  tooltip: TooltipState
+  containerRef: React.RefObject<HTMLDivElement | null>
+}
+
+function NodeTooltip({ tooltip, containerRef }: TooltipProps) {
+  const { node, screenX, screenY } = tooltip
+  const cardW = 176
+  const containerW = containerRef.current?.offsetWidth  ?? VW
+  const containerH = containerRef.current?.offsetHeight ?? VH
+
+  // Flip to left if near right edge, flip above if near bottom
+  const isRight  = screenX + cardW + 16 > containerW
+  const isBottom = screenY + 120 > containerH
+  const left = isRight ? screenX - cardW - 12 : screenX + 14
+  const top  = isBottom ? screenY - 100 : screenY - 12
+
+  const dotColor =
+    node.kind === 'office' ? '#4F46E5' :
+    node.kind === 'room'   ? '#6366F1' :
+    node.status            ? '#22C55E' : '#94A3B8'
 
   return (
-    <g>
-      {/* arrow connector line */}
-      <line
-        x1={svgX} y1={svgY < VH / 2 ? svgY + 14 : svgY - 14}
-        x2={x + cardW / 2} y2={svgY < VH / 2 ? y : y + cardH}
-        stroke="#6366F1" strokeWidth={1} strokeDasharray="3 2" strokeOpacity={0.5}
-      />
-      <foreignObject x={x} y={y} width={cardW} height={cardH + 8}>
-        <div
-          // @ts-expect-error xmlns needed for SVG foreignObject
-          xmlns="http://www.w3.org/1999/xhtml"
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            padding: '10px 12px',
-            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.5)',
-            fontSize: 11,
-            color: 'var(--foreground)',
-            position: 'relative',
-          }}
-        >
-          {/* dismiss button */}
-          <button
-            onClick={onDismiss}
+    <div
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: cardW,
+        zIndex: 50,
+        pointerEvents: 'none',
+      }}
+      className="rounded-xl border border-border bg-card shadow-2xl"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-border">
+        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+        <span className="text-xs font-semibold text-foreground truncate">{node.label}</span>
+        {node.status !== undefined && (
+          <span
+            className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
             style={{
-              position: 'absolute', top: 6, right: 8,
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--muted-foreground)', fontSize: 14, lineHeight: 1,
-              padding: 0,
+              background: node.status ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.1)',
+              color: node.status ? '#22C55E' : '#94A3B8',
             }}
-            aria-label="Dismiss"
           >
-            ×
-          </button>
+            {node.status ? 'ON' : 'OFF'}
+          </span>
+        )}
+      </div>
 
-          {/* node name + status badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingRight: 16 }}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-              background: node.kind === 'office' ? '#4F46E5'
-                : node.kind === 'room'   ? '#6366F1'
-                : node.status            ? '#22C55E'
-                : '#94A3B8',
-            }} />
-            <span style={{ fontWeight: 600, fontSize: 11, lineHeight: 1.3 }}>{node.label}</span>
-            {node.status !== undefined && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                background: node.status ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)',
-                color: node.status ? '#22C55E' : '#94A3B8',
-              }}>
-                {node.status ? 'ON' : 'OFF'}
-              </span>
-            )}
-          </div>
-
-          {/* detail rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--muted-foreground)' }}>
-            <span>Type: <span style={{ color: 'var(--foreground)', textTransform: 'capitalize' }}>{node.kind}</span></span>
-            {node.room && (
-              <span>Room: <span style={{ color: 'var(--foreground)' }}>{ROOM_LABELS[node.room as RoomId] ?? node.room}</span></span>
-            )}
-            {node.wattage != null && node.status && (
-              <span>Draw: <span style={{ color: 'var(--foreground)', fontFamily: 'monospace' }}>{node.wattage}W</span></span>
-            )}
-            {node.kind === 'office' && (
-              <span style={{ color: 'var(--foreground)' }}>3 rooms · 15 devices</span>
-            )}
-          </div>
-        </div>
-      </foreignObject>
-    </g>
+      {/* Body */}
+      <div className="px-3 py-2.5 flex flex-col gap-1.5">
+        <Row label="Type" value={node.kind.charAt(0).toUpperCase() + node.kind.slice(1)} />
+        {node.room && (
+          <Row label="Room" value={ROOM_LABELS[node.room as RoomId] ?? node.room} />
+        )}
+        {node.wattage != null && node.status && (
+          <Row label="Draw" value={`${node.wattage}W`} mono />
+        )}
+        {node.kind === 'office' && (
+          <Row label="Contains" value="3 rooms · 15 devices" />
+        )}
+        {node.kind === 'room' && (
+          <Row label="Devices" value="5 devices" />
+        )}
+      </div>
+    </div>
   )
 }
 
-// ── D3 graph — fixed viewBox, drag + zoom only ────────────────────────────────
-interface GraphProps {
-  devices: Device[]
-  onNodeClick: (node: KGNode | null, svgCoords: { x: number; y: number } | null) => void
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className={`text-[11px] text-foreground ${mono ? 'font-mono tabular-nums' : ''}`}>{value}</span>
+    </div>
+  )
 }
 
-function D3Graph({ devices, onNodeClick }: GraphProps) {
-  const svgRef     = useRef<SVGSVGElement>(null)
-  const gRef       = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null)
-  const nodeSelRef = useRef<d3.Selection<SVGGElement, KGNode, SVGGElement, unknown> | null>(null)
-  const linkSelRef = useRef<d3.Selection<SVGLineElement, KGLink, SVGGElement, unknown> | null>(null)
-  const lblSelRef  = useRef<d3.Selection<SVGTextElement, KGLink, SVGGElement, unknown> | null>(null)
+// ── D3 graph ──────────────────────────────────────────────────────────────────
+interface GraphProps {
+  devices: Device[]
+}
 
-  // Floating card state — managed inside the graph component
-  const [floatCard, setFloatCard] = useState<{ node: KGNode; x: number; y: number } | null>(null)
+function D3Graph({ devices }: GraphProps) {
+  const svgRef       = useRef<SVGSVGElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const gRef         = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null)
+  const nodeSelRef   = useRef<d3.Selection<SVGGElement, KGNode, SVGGElement, unknown> | null>(null)
+  const linkSelRef   = useRef<d3.Selection<SVGLineElement, KGLink, SVGGElement, unknown> | null>(null)
+  const lblSelRef    = useRef<d3.Selection<SVGTextElement, KGLink, SVGGElement, unknown> | null>(null)
 
-  // Keep a ref to devices so onNodeClick callbacks stay fresh
-  const onNodeClickRef = useRef(onNodeClick)
-  onNodeClickRef.current = onNodeClick
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null)
 
-  // ── Build + draw ─────────────────────────────────────────────────────────
+  // Convert a node's viewBox coords → container screen-space px using current zoom transform
+  function toScreen(node: KGNode): { screenX: number; screenY: number } {
+    const svg  = svgRef.current
+    const cont = containerRef.current
+    if (!svg || !cont) return { screenX: 0, screenY: 0 }
+
+    const transform  = d3.zoomTransform(svg)
+    const svgRect    = svg.getBoundingClientRect()
+    const contRect   = cont.getBoundingClientRect()
+
+    // Node in viewBox space → screen space via zoom transform
+    const vx = transform.applyX(node.x)
+    const vy = transform.applyY(node.y)
+
+    // Scale from viewBox to SVG pixel dimensions
+    const scaleX = svgRect.width  / VW
+    const scaleY = svgRect.height / VH
+
+    const screenX = vx * scaleX + (svgRect.left - contRect.left)
+    const screenY = vy * scaleY + (svgRect.top  - contRect.top)
+    return { screenX, screenY }
+  }
+
   const draw = useCallback((devs: Device[]) => {
     const svg = svgRef.current
     if (!svg) return
@@ -303,8 +309,7 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
     const defs = sel.append('defs')
     const mkMarker = (id: string, color: string) =>
       defs.append('marker')
-        .attr('id', id)
-        .attr('refX', 14).attr('refY', 3)
+        .attr('id', id).attr('refX', 14).attr('refY', 3)
         .attr('markerWidth', 5).attr('markerHeight', 6)
         .attr('orient', 'auto-start-reverse')
         .append('path').attr('d', 'M0,0 L0,6 L6,3 z').attr('fill', color)
@@ -312,15 +317,17 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
     mkMarker('a-on',   '#22C55E')
     mkMarker('a-off',  '#94A3B8')
 
-    // Zoom group
     const g = sel.append('g')
     gRef.current = g
 
-    // Zoom behaviour
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.25, 4])
-      .on('zoom', (e) => g.attr('transform', e.transform))
+      .on('zoom', (e) => { g.attr('transform', e.transform); setTooltip(null) })
     sel.call(zoom)
+    // Dismiss tooltip on background click
+    sel.on('click', (e) => {
+      if ((e.target as SVGElement).tagName === 'svg') setTooltip(null)
+    })
 
     // Edges
     const linkSel = g.append('g').attr('class', 'links')
@@ -336,13 +343,13 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       })
     linkSelRef.current = linkSel
 
-    // Edge labels (hidden at default scale — visible when zoomed in)
+    // Edge labels (hidden until zoomed)
     const lblSel = g.append('g').attr('class', 'edge-labels')
       .selectAll<SVGTextElement, KGLink>('text')
       .data(links).join('text')
       .attr('font-size', 7)
       .attr('fill', '#94A3B8')
-      .attr('fill-opacity', 0)   // hidden by default — show on zoom via CSS
+      .attr('fill-opacity', 0)
       .attr('text-anchor', 'middle')
       .attr('dy', -3)
       .text((l) => l.label)
@@ -353,18 +360,16 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .selectAll<SVGGElement, KGNode>('g')
       .data(nodes, (d) => d.id)
       .join('g')
-      .attr('cursor', 'pointer')
-      .on('click', (e, d) => {
-        // Get the current zoom transform to convert node coords to viewBox coords
-        const transform = d3.zoomTransform(svgRef.current!)
-        const vx = transform.applyX(d.x)
-        const vy = transform.applyY(d.y)
-        setFloatCard((prev) => prev?.node.id === d.id ? null : { node: d, x: vx, y: vy })
-        onNodeClickRef.current(d, { x: vx, y: vy })
+      .attr('cursor', 'default')
+      // ── Hover: show tooltip ───────────────────────────────────────────────
+      .on('mouseenter', (_e, d) => {
+        const { screenX, screenY } = toScreen(d)
+        setTooltip({ node: d, screenX, screenY })
       })
+      .on('mouseleave', () => setTooltip(null))
     nodeSelRef.current = nodeSel
 
-    // Node: glow ring for ON devices
+    // Glow ring for ON devices
     nodeSel.filter((d) => d.status === true)
       .append('circle')
       .attr('r', (d) => nodeRadius(d) + 5)
@@ -374,7 +379,7 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .attr('stroke-opacity', 0.3)
       .attr('stroke-dasharray', '3 2')
 
-    // Node: circles
+    // Circles
     nodeSel.append('circle')
       .attr('r', (d) => nodeRadius(d))
       .attr('fill', (d) => nodeColor(d))
@@ -382,19 +387,16 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .attr('stroke', (d) => nodeColor(d))
       .attr('stroke-width', (d) => d.kind === 'office' ? 2.5 : 1.5)
 
-    // Node: icon text (fan = ⊕, light = ◉, room = ▣)
+    // Icon text inside nodes
     nodeSel.filter((d) => d.kind !== 'room').append('text')
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'central')
       .attr('font-size', (d) => d.kind === 'office' ? 11 : 8)
       .attr('fill', (d) => d.kind === 'office' ? '#fff' : d.status ? '#fff' : '#64748B')
-      .text((d) => {
-        if (d.kind === 'office') return 'HQ'
-        if (d.kind === 'fan')    return 'F'
-        return 'L'
-      })
+      .attr('pointer-events', 'none')
+      .text((d) => d.kind === 'office' ? 'HQ' : d.kind === 'fan' ? 'F' : 'L')
 
-    // Node: labels below
+    // Labels below nodes
     nodeSel.append('text')
       .attr('dy', (d) => nodeRadius(d) + 11)
       .attr('text-anchor', 'middle')
@@ -402,64 +404,50 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .attr('font-weight', (d) => (d.kind === 'office' || d.kind === 'room') ? 600 : 400)
       .attr('fill', 'currentColor')
       .attr('fill-opacity', (d) => (d.kind !== 'office' && d.kind !== 'room' && !d.status) ? 0.4 : 1)
+      .attr('pointer-events', 'none')
       .text((d) => d.label)
 
-    // Drag — updates node positions and redraws edges
+    // Drag
     nodeSel.call(
       d3.drag<SVGGElement, KGNode>()
-        .on('start', (_e, d) => { d.x = d.x; d.y = d.y })
+        .on('start', () => setTooltip(null))
         .on('drag', (e, d) => {
           d.x = e.x; d.y = e.y
           applyPositions()
         })
     )
 
-    // Apply all positions
     applyPositions()
 
     function applyPositions() {
       linkSel
-        .attr('x1', (l) => l.source.x)
-        .attr('y1', (l) => l.source.y)
-        .attr('x2', (l) => l.target.x)
-        .attr('y2', (l) => l.target.y)
+        .attr('x1', (l) => l.source.x).attr('y1', (l) => l.source.y)
+        .attr('x2', (l) => l.target.x).attr('y2', (l) => l.target.y)
       lblSel
         .attr('x', (l) => (l.source.x + l.target.x) / 2)
         .attr('y', (l) => (l.source.y + l.target.y) / 2)
       nodeSel.attr('transform', (d) => `translate(${d.x},${d.y})`)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Draw once on mount and re-draw when devices change (only device statuses)
-  const devicesRef = useRef(devices)
   useEffect(() => {
-    devicesRef.current = devices
     draw(devices)
   }, [devices, draw])
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${VW} ${VH}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="w-full h-full"
-      style={{ display: 'block' }}
-      aria-label="Office knowledge graph"
-      onClick={(e) => {
-        // Dismiss card when clicking on empty SVG background
-        if ((e.target as SVGElement).tagName === 'svg') setFloatCard(null)
-      }}
-    >
-      {/* FloatingCard overlaid on top of everything — rendered in React, not D3 */}
-      {floatCard && (
-        <FloatingCard
-          node={floatCard.node}
-          svgX={floatCard.x}
-          svgY={floatCard.y}
-          onDismiss={() => setFloatCard(null)}
-        />
+    <div ref={containerRef} className="relative w-full h-full">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${VW} ${VH}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full"
+        style={{ display: 'block' }}
+        aria-label="Office knowledge graph"
+      />
+      {tooltip && (
+        <NodeTooltip tooltip={tooltip} containerRef={containerRef} />
       )}
-    </svg>
+    </div>
   )
 }
 
@@ -469,13 +457,11 @@ export function KnowledgeGraphTab({ devices }: { devices: Device[] }) {
     <div className="flex flex-col gap-0">
       <HeroCard devices={devices} />
       <Legend />
-
       <div
         className="rounded-xl border border-border bg-card overflow-hidden"
         style={{ height: 360 }}
       >
-        {/* D3Graph manages its own floating card state internally */}
-        <D3Graph devices={devices} onNodeClick={() => {}} />
+        <D3Graph devices={devices} />
       </div>
     </div>
   )

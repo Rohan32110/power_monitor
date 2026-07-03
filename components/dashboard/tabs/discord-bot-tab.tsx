@@ -1,143 +1,191 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-// ── Ghost icon ────────────────────────────────────────────────────────────────
-function GhostBot() {
+// ── Discord logo (from theSVG.org — please review Discord trademark guidelines) ──
+function DiscordLogo({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" className="h-full w-full" aria-hidden>
-      <rect x="12" y="20" width="40" height="30" rx="6" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
-      <path d="M20 20V14a12 12 0 0 1 24 0v6" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
-      <circle cx="22" cy="35" r="3.5" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
-      <circle cx="42" cy="35" r="3.5" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
-      <path d="M25 44h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.12" />
-      <path d="M32 8v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.12" />
+    <img
+      src="https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/discord/default.svg"
+      alt="Discord"
+      className={className}
+      draggable={false}
+    />
+  )
+}
+
+// ── Hash icon ─────────────────────────────────────────────────────────────────
+function IconHash({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <path d="M4 7h12M4 13h12M8 3l-2 14M14 3l-2 14" strokeLinecap="round" />
     </svg>
   )
 }
 
-// ── Commands reference ────────────────────────────────────────────────────────
+// ── Bot avatar ────────────────────────────────────────────────────────────────
+function BotAvatar() {
+  return (
+    <div className="h-8 w-8 rounded-full bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-sm">
+      <DiscordLogo className="h-4.5 w-4.5 invert brightness-200" />
+    </div>
+  )
+}
+
+// ── Command chips ─────────────────────────────────────────────────────────────
 const COMMANDS = [
-  { cmd: '!status',    desc: 'Show overall office status — devices on/off, total watts' },
-  { cmd: '!usage',     desc: 'Energy usage summary — watts now + kWh today' },
-  { cmd: '!room <name>', desc: 'Details for a specific room (drawing, work1, work2)' },
-  { cmd: '!alerts',    desc: 'List all active alerts with severity and timestamp' },
-  { cmd: '!help',      desc: 'Show all available commands' },
+  { cmd: '!status',       desc: 'Overall office status' },
+  { cmd: '!usage',        desc: 'Energy usage summary' },
+  { cmd: '!room drawing', desc: 'Drawing Room details' },
+  { cmd: '!room work1',   desc: 'Work Room 1 details' },
+  { cmd: '!room work2',   desc: 'Work Room 2 details' },
+  { cmd: '!alerts',       desc: 'Active alerts list' },
 ]
 
-// ── Demo console ─────────────────────────────────────────────────────────────
+// ── Messages ──────────────────────────────────────────────────────────────────
 interface Message { role: 'user' | 'bot'; content: string; ts: string }
 
-function DemoConsole() {
+function now12() {
+  return new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' })
+}
+
+// ── Chat simulator ────────────────────────────────────────────────────────────
+function ChatSimulator() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'bot',
-      content: 'Office Pulse bot online. Type a command like `!status` to query the live office state.',
-      ts: new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' }),
+      content: 'Office Pulse is online. Try a command like **!status** to check the live office state, or click a quick command below.',
+      ts: now12(),
     },
   ])
-  const [input, setInput] = useState('')
+  const [input, setInput]   = useState('')
   const [loading, setLoading] = useState(false)
+  const bottomRef             = useRef<HTMLDivElement>(null)
 
-  async function send() {
-    const val = input.trim()
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function send(raw?: string) {
+    const val = (raw ?? input).trim()
     if (!val || loading) return
-    const ts = new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' })
+    const ts = now12()
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: val, ts }])
     setLoading(true)
     try {
-      const parts = val.split(' ')
+      const parts   = val.split(' ')
       const command = parts[0]
-      const args = parts.slice(1).join(' ')
-      const res = await fetch('/api/discord', {
+      const args    = parts.slice(1).join(' ')
+      const res     = await fetch('/api/discord', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command, args }),
       })
       const data = await res.json()
-      const botTs = new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' })
       setMessages((m) => [...m, {
         role: 'bot',
         content: data.response ?? data.error ?? 'No response.',
-        ts: botTs,
+        ts: now12(),
       }])
     } catch {
-      setMessages((m) => [...m, { role: 'bot', content: 'Error: Could not reach the bot API.', ts }])
+      setMessages((m) => [...m, { role: 'bot', content: 'Error reaching the bot API.', ts: now12() }])
     } finally {
       setLoading(false)
     }
   }
 
+  // Render bold (**text**) in bot messages
+  function renderContent(text: string) {
+    const parts = text.split(/(\*\*[^*]+\*\*)/)
+    return parts.map((p, i) =>
+      p.startsWith('**') && p.endsWith('**')
+        ? <strong key={i} className="font-semibold text-foreground">{p.slice(2, -2)}</strong>
+        : <span key={i}>{p}</span>
+    )
+  }
+
   return (
-    <div className="flex flex-col h-[340px] rounded-xl border border-border bg-card overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-surface flex-shrink-0">
-        <div className="flex gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-danger/60" />
-          <span className="h-2.5 w-2.5 rounded-full bg-warning/60" />
-          <span className="h-2.5 w-2.5 rounded-full bg-on/60" />
+    <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden" style={{ height: 380 }}>
+      {/* Discord-style channel header */}
+      <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border bg-surface flex-shrink-0">
+        <IconHash className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0" />
+        <span className="text-sm font-semibold text-foreground">office-pulse-bot</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-on flex-shrink-0" />
+          <span className="text-xs font-medium text-on">Online</span>
         </div>
-        <span className="text-xs text-muted-foreground font-mono">#office-pulse-bot</span>
-        <span className="ml-auto flex items-center gap-1 text-xs text-on">
-          <span className="h-1.5 w-1.5 rounded-full bg-on" />
-          Bot online
-        </span>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {msg.role === 'bot' && (
-              <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.4} className="h-3.5 w-3.5 text-primary">
-                  <rect x="3" y="5" width="10" height="8" rx="1.5" />
-                  <path d="M5.5 5V3.5a2.5 2.5 0 0 1 5 0V5" />
-                  <circle cx="6" cy="9" r="1" fill="currentColor" stroke="none" />
-                  <circle cx="10" cy="9" r="1" fill="currentColor" stroke="none" />
-                  <path d="M6.5 11.5h3" strokeLinecap="round" />
-                </svg>
+          <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+            {msg.role === 'bot' && <BotAvatar />}
+            <div className={`flex flex-col gap-0.5 max-w-[78%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div
+                className={`rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words
+                  ${msg.role === 'bot'
+                    ? 'bg-surface text-muted-foreground rounded-tl-sm'
+                    : 'bg-primary text-primary-foreground rounded-tr-sm'
+                  }`}
+              >
+                {msg.role === 'bot' ? renderContent(msg.content) : msg.content}
               </div>
-            )}
-            <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words
-              ${msg.role === 'bot'
-                ? 'bg-surface text-foreground border border-border'
-                : 'bg-primary text-primary-foreground'
-              }`}
-            >
-              {msg.content}
-              <span className="block text-[10px] opacity-50 mt-1 text-right">{msg.ts}</span>
+              <span className="text-[10px] text-muted-foreground px-1">{msg.ts}</span>
             </div>
           </div>
         ))}
         {loading && (
-          <div className="flex gap-2.5 items-center">
-            <div className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-              <span className="h-1 w-1 rounded-full bg-primary animate-bounce" />
-            </div>
-            <div className="bg-surface border border-border rounded-xl px-3 py-2 text-xs text-muted-foreground">
-              Processing…
+          <div className="flex gap-2.5">
+            <BotAvatar />
+            <div className="bg-surface rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
+              {[0, 150, 300].map((delay) => (
+                <span
+                  key={delay}
+                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
+                  style={{ animation: `bounce 1.2s ease-in-out ${delay}ms infinite` }}
+                />
+              ))}
             </div>
           </div>
         )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Quick commands */}
+      <div className="flex-shrink-0 px-3 py-2 border-t border-border flex gap-1.5 overflow-x-auto scrollbar-none">
+        {COMMANDS.map((c) => (
+          <button
+            key={c.cmd}
+            onClick={() => send(c.cmd)}
+            className="flex-shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
+          >
+            {c.cmd}
+          </button>
+        ))}
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 border-t border-border bg-surface">
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 pb-3">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) send() }}
-          placeholder="Type !status, !usage, !alerts, !room drawing…"
-          className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/40 font-mono"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) send()
+          }}
+          placeholder="Message #office-pulse-bot"
+          className="flex-1 bg-surface border border-border rounded-xl px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
         />
         <button
-          onClick={send}
+          onClick={() => send()}
           disabled={loading || !input.trim()}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-white disabled:opacity-40 transition-opacity hover:opacity-90"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white disabled:opacity-40 hover:opacity-90 transition-opacity flex-shrink-0"
+          aria-label="Send"
         >
-          Send
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
+            <path d="M14.5 1.5L1 6.5l4.5 2L10 4l-4 5 2.5 4.5z" />
+          </svg>
         </button>
       </div>
     </div>
@@ -149,72 +197,96 @@ export function DiscordBotTab() {
   return (
     <div className="flex flex-col gap-5">
       {/* Hero card */}
-      <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card p-6">
-        <div className="pointer-events-none absolute -right-2 -top-2 h-36 w-36 text-primary">
-          <GhostBot />
+      <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4">
+        {/* Discord brand watermark — top right */}
+        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 opacity-[0.06]">
+          <DiscordLogo className="h-24 w-24 dark:invert" />
         </div>
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Discord integration</p>
-            <h1 className="text-2xl font-bold text-foreground">Office Pulse Bot</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-lg">
-              A Discord bot that queries live office state via the{' '}
-              <code className="font-mono bg-surface px-1 py-0.5 rounded text-xs">/api/discord</code>{' '}
-              webhook. Deploy the standalone bot script with your token to bring it online in any server.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 text-xs text-muted-foreground flex-shrink-0 min-w-[200px]">
-            <div className="rounded-lg border border-border bg-surface px-3 py-2.5">
-              <p className="font-semibold text-foreground text-[11px] uppercase tracking-wide mb-1.5">Setup</p>
-              <ol className="list-decimal list-inside space-y-1 leading-relaxed">
-                <li>Add <code className="font-mono bg-card px-1 rounded">DISCORD_BOT_TOKEN</code></li>
-                <li>Run <code className="font-mono bg-card px-1 rounded">node discord-bot/bot.js</code></li>
-                <li>Invite bot to your server</li>
-                <li>Use commands in any channel</li>
-              </ol>
+
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5865F2] shadow-lg flex-shrink-0">
+              <DiscordLogo className="h-5.5 w-5.5 invert brightness-200" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
+                Discord integration
+              </p>
+              <h1 className="text-xl font-bold text-foreground leading-snug">Office Pulse Bot</h1>
             </div>
           </div>
+
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { label: 'Commands', value: '6' },
+              { label: 'Webhook', value: 'Live' },
+              { label: 'Status', value: 'Ready' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex flex-col items-center rounded-lg border border-border bg-surface px-3 py-2 min-w-[60px]">
+                <span className="text-sm font-bold tabular-nums text-foreground leading-none">{value}</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
+        <p className="relative text-xs text-muted-foreground mt-3 max-w-xl leading-relaxed">
+          A Discord bot that queries live office state via the{' '}
+          <code className="font-mono bg-surface border border-border px-1 py-0.5 rounded text-[11px]">/api/discord</code>{' '}
+          webhook. Use the simulator below to try commands, or deploy the standalone bot to your server.
+        </p>
       </div>
 
+      {/* Grid: simulator + commands */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-        {/* Demo console */}
-        <div className="lg:col-span-3">
-          <h2 className="text-sm font-semibold text-foreground mb-2.5">Live bot simulator</h2>
-          <DemoConsole />
+        <div className="lg:col-span-3 flex flex-col gap-2.5">
+          <h2 className="text-sm font-semibold text-foreground">Bot simulator</h2>
+          <ChatSimulator />
         </div>
 
         {/* Commands reference */}
-        <div className="lg:col-span-2">
-          <h2 className="text-sm font-semibold text-foreground mb-2.5">Available commands</h2>
+        <div className="lg:col-span-2 flex flex-col gap-2.5">
+          <h2 className="text-sm font-semibold text-foreground">Available commands</h2>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             {COMMANDS.map((c, i) => (
               <div
                 key={c.cmd}
-                className={`flex flex-col gap-1 px-4 py-3 ${i < COMMANDS.length - 1 ? 'border-b border-border' : ''}`}
+                className={`flex items-center gap-3 px-4 py-3 ${i < COMMANDS.length - 1 ? 'border-b border-border' : ''}`}
               >
-                <code className="text-xs font-mono font-semibold text-primary">{c.cmd}</code>
+                <code className="text-xs font-mono font-semibold text-primary min-w-[90px]">{c.cmd}</code>
                 <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* Env vars needed */}
-          <div className="mt-4 rounded-xl border border-warning/20 bg-warning/5 p-4">
-            <p className="text-xs font-semibold text-warning mb-2">Required environment variables</p>
-            <div className="space-y-1.5">
-              {[
-                { key: 'DISCORD_BOT_TOKEN', desc: 'Bot token from Discord Developer Portal' },
-                { key: 'OPENAI_API_KEY',    desc: 'Optional — for AI-enhanced responses' },
-              ].map(({ key, desc }) => (
-                <div key={key}>
-                  <code className="text-[11px] font-mono text-foreground bg-card border border-border px-1.5 py-0.5 rounded">{key}</code>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
-                </div>
-              ))}
+          {/* Status card */}
+          <div className="rounded-xl border border-border bg-card px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">Bot status</span>
+              <div className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-on live-dot" />
+                <span className="text-xs text-on font-medium">Operational</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 text-[11px]">
+              <StatusRow label="API endpoint" value="/api/discord" ok />
+              <StatusRow label="State sync"   value="Real-time"    ok />
+              <StatusRow label="AI responses" value="Enabled"      ok />
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function StatusRow({ label, value, ok }: { label: string; value: string; ok: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${ok ? 'bg-on' : 'bg-danger'}`} />
+        <span className="text-foreground">{value}</span>
       </div>
     </div>
   )
