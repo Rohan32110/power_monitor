@@ -17,16 +17,16 @@ function GhostBell() {
 
 // ── Type definitions ──────────────────────────────────────────────────────────
 const SEVERITY_ROW: Record<string, string> = {
-  critical: 'border-danger/30 bg-danger/5',
-  warning:  'border-warning/30 bg-warning/5',
+  critical: 'border-border bg-card',
+  warning:  'border-border bg-card',
 }
 const SEVERITY_DOT: Record<string, string> = {
-  critical: 'bg-danger',
-  warning:  'bg-warning',
+  critical: 'bg-muted-foreground',
+  warning:  'bg-muted-foreground',
 }
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  after_hours: { label: 'After Hours',    cls: 'bg-warning/15 text-warning border border-warning/25' },
-  all_on_2hr:  { label: 'Continuous 2h+', cls: 'bg-danger/15 text-danger border border-danger/25' },
+  after_hours: { label: 'After Hours',    cls: 'bg-surface text-muted-foreground border border-border' },
+  all_on_2hr:  { label: 'Continuous 2h+', cls: 'bg-surface text-muted-foreground border border-border' },
 }
 
 const TYPE_DESCRIPTION: Record<string, string> = {
@@ -126,16 +126,15 @@ export function AlertsTab({ alerts, onGoToDashboard }: Props) {
           </div>
           <div className="flex flex-wrap gap-2.5">
             {[
-              { label: 'Total',      value: String(totalAlerts), accent: totalAlerts > 0 },
-              { label: 'After hrs',  value: String(afterHours.length),  accent: afterHours.length > 0 },
-              { label: '2h+ on',     value: String(allOn2hr.length),    accent: allOn2hr.length > 0 },
-            ].map(({ label, value, accent }) => (
+              { label: 'Total',     value: String(totalAlerts) },
+              { label: 'After hrs', value: String(afterHours.length) },
+              { label: '2h+ on',    value: String(allOn2hr.length) },
+            ].map(({ label, value }) => (
               <div
                 key={label}
-                className={`flex flex-col items-center rounded-lg border px-3 py-2 min-w-[58px]
-                  ${accent ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface'}`}
+                className="flex flex-col items-center rounded-lg border border-border bg-surface px-3 py-2 min-w-[58px]"
               >
-                <span className={`text-sm font-bold tabular-nums leading-none ${accent ? 'text-danger' : 'text-foreground'}`}>
+                <span className="text-sm font-bold tabular-nums leading-none text-foreground">
                   {value}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</span>
@@ -170,7 +169,7 @@ export function AlertsTab({ alerts, onGoToDashboard }: Props) {
           {afterHours.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
-                <span className="h-2 w-2 rounded-full bg-warning flex-shrink-0" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   After hours — devices left on ({afterHours.length})
                 </h2>
@@ -185,7 +184,7 @@ export function AlertsTab({ alerts, onGoToDashboard }: Props) {
           {allOn2hr.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
-                <span className="h-2 w-2 rounded-full bg-danger flex-shrink-0" />
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Continuous 2h+ — all devices on ({allOn2hr.length})
                 </h2>
@@ -205,12 +204,12 @@ export function AlertsTab({ alerts, onGoToDashboard }: Props) {
           {[
             {
               type: 'After Hours',
-              cls: 'bg-warning/10 text-warning border-warning/20',
+              cls: 'bg-surface text-muted-foreground border-border',
               rule: 'Any device active outside office hours (before 09:00 or after 17:00). Clears when all devices in the room are turned off.',
             },
             {
               type: 'Continuous 2h+',
-              cls: 'bg-danger/10 text-danger border-danger/20',
+              cls: 'bg-surface text-muted-foreground border-border',
               rule: 'All 5 devices in a room (2 fans + 3 lights) have been ON continuously for 2 or more hours. Clears when any device turns off.',
             },
           ].map(({ type, cls, rule }) => (
