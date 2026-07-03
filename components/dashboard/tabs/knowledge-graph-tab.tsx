@@ -182,15 +182,23 @@ interface TooltipProps {
 
 function NodeTooltip({ tooltip, containerRef }: TooltipProps) {
   const { node, screenX, screenY } = tooltip
-  const cardW = 176
+  const cardW = 182
+  const cardH = 110
   const containerW = containerRef.current?.offsetWidth  ?? VW
   const containerH = containerRef.current?.offsetHeight ?? VH
 
-  // Flip to left if near right edge, flip above if near bottom
-  const isRight  = screenX + cardW + 16 > containerW
-  const isBottom = screenY + 120 > containerH
-  const left = isRight ? screenX - cardW - 12 : screenX + 14
-  const top  = isBottom ? screenY - 100 : screenY - 12
+  // Always offset horizontally so the card never overlaps the node
+  const nodeR = nodeRadius(node)
+  const gapFromNode = nodeR + 18   // clear the node circle + a small gap
+
+  // Prefer right; flip to left if near right edge
+  const fitsRight = screenX + gapFromNode + cardW < containerW
+  const left = fitsRight
+    ? screenX + gapFromNode
+    : screenX - gapFromNode - cardW
+
+  // Vertically: centre on the node, clamp within container
+  const top = Math.max(4, Math.min(screenY - cardH / 2, containerH - cardH - 4))
 
   const dotColor =
     node.kind === 'office' ? '#4F46E5' :

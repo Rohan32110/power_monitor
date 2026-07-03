@@ -225,7 +225,7 @@ export function DashboardClient() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex overflow-hidden bg-background" style={{ height: '100dvh' }}>
 
       {/* ── Sidebar ─────────────────────────────────────────────── */}
       <aside
