@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-pulse-on: var(--pulse-on);
+  --color-pulse-warning: var(--pulse-warning);
+  --color-pulse-danger: var(--pulse-danger);
+  --color-surface: var(--surface);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  --background: #0B0E14;
+  --foreground: #EAEDF2;
+  --card: #151A23;
+  --card-foreground: #EAEDF2;
+  --surface: #1C2230;
+  --border: #252B37;
+  --muted: #1C2230;
+  --muted-foreground: #8A93A3;
+  --primary: #22D3A6;
+  --primary-foreground: #0B0E14;
+  --accent: #3B82F6;
+  --accent-foreground: #ffffff;
+  --destructive: #F0526B;
+  --ring: #22D3A6;
+  --input: #252B37;
+  --pulse-on: #22D3A6;
+  --pulse-warning: #F5A623;
+  --pulse-danger: #F0526B;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Fan spin animation */
+@keyframes fan-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fan-spin {
+  animation: fan-spin 1.5s linear infinite;
+  transform-origin: center;
+}
+
+/* Device ON glow */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.glow-on {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Number counter transition */
+.live-number {
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--card);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
