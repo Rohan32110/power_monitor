@@ -81,55 +81,53 @@ function HeroCard({
   const loadPct = totalDevices > 0 ? Math.round((totalOn / totalDevices) * 100) : 0
 
   return (
-    <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card p-6">
-      {/* Ghost background art */}
-      <div className="pointer-events-none absolute -right-2 -top-2 h-36 w-36 text-primary opacity-100">
+    <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4">
+      <div className="pointer-events-none absolute -right-2 -top-2 h-24 w-24 text-primary">
         <GhostBolt />
       </div>
 
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
         {/* Left: headline */}
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className={`h-2 w-2 rounded-full ${connected ? 'bg-on live-dot' : 'bg-muted-foreground'}`} />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${connected ? 'bg-on live-dot' : 'bg-muted-foreground'}`} />
+            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
               {connected ? 'Live monitoring' : 'Connecting…'}
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-foreground tabular-nums">
-            {totalWatts}
-            <span className="text-lg font-normal text-muted-foreground ml-1.5">W</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Total office draw right now</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold text-foreground tabular-nums">{totalWatts}</span>
+            <span className="text-sm font-normal text-muted-foreground">W total draw</span>
+          </div>
         </div>
 
         {/* Right: stat pills */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Devices on', value: `${totalOn} / ${totalDevices}`, accent: false },
-            { label: 'Load', value: `${loadPct}%`, accent: loadPct > 80 },
-            { label: 'Today kWh', value: todayKwh.toFixed(3), accent: false },
-            { label: 'Active alerts', value: String(alertCount), accent: alertCount > 0 },
+            { label: 'Devices on', value: `${totalOn}/${totalDevices}`, accent: false },
+            { label: 'Load',       value: `${loadPct}%`,                 accent: loadPct > 80 },
+            { label: 'Today kWh',  value: todayKwh.toFixed(3),           accent: false },
+            { label: 'Alerts',     value: String(alertCount),             accent: alertCount > 0 },
           ].map(({ label, value, accent }) => (
             <div
               key={label}
-              className={`flex flex-col items-center rounded-lg border px-4 py-2.5 min-w-[80px]
-                ${accent ? 'border-danger/30 bg-danger/5 text-danger' : 'border-border bg-surface text-foreground'}`}
+              className={`flex flex-col items-center rounded-lg border px-3 py-2 min-w-[64px]
+                ${accent ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface'}`}
             >
-              <span className={`text-lg font-bold tabular-nums leading-none ${accent ? 'text-danger' : ''}`}>{value}</span>
-              <span className="text-[11px] text-muted-foreground mt-1 whitespace-nowrap">{label}</span>
+              <span className={`text-sm font-bold tabular-nums leading-none ${accent ? 'text-danger' : 'text-foreground'}`}>{value}</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Capacity bar */}
-      <div className="relative mt-5">
-        <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5">
+      <div className="mt-3">
+        <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
           <span>Office capacity</span>
           <span className="tabular-nums font-mono">{totalWatts} / 495W</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-surface overflow-hidden">
+        <div className="h-1 w-full rounded-full bg-surface overflow-hidden">
           <div
             className="h-full rounded-full bg-primary transition-all duration-700"
             style={{ width: `${Math.min((totalWatts / 495) * 100, 100)}%` }}
@@ -314,8 +312,11 @@ function DeviceGrid({ devices }: { devices: Device[] }) {
                       }`}
                     >
                       {d.device_type === 'fan' ? (
-                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.4} className={`h-4 w-4 ${d.status ? 'fan-spin' : ''}`}>
-                          <path d="M8 8c0-2 1.5-5 4-5s2 3 0 4c2 1 5 1.5 5 4s-3 2-4 0c-1 2-1.5 5-4 5s-2-3 0-4c-2-1-5-1.5-5-4s3-2 4 0z" />
+                        <svg viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 ${d.status ? (d.status ? 'text-primary' : 'text-muted-foreground') + ' fan-spin' : 'text-muted-foreground'}`}>
+                          <circle cx="12" cy="12" r="2" />
+                          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" />
+                          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(120 12 12)" />
+                          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(240 12 12)" />
                         </svg>
                       ) : (
                         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.4} className="h-4 w-4">
@@ -395,9 +396,6 @@ export function DashboardTab({ devices, alerts, energy, connected }: Props) {
         <PowerChart history={[..._powerHistory]} />
         <RoomChart roomWatts={energy.room_watts as Record<string, number>} />
       </div>
-
-      {/* Alerts */}
-      <AlertsCard alerts={alerts} />
 
       {/* Devices */}
       <DeviceGrid devices={devices} />

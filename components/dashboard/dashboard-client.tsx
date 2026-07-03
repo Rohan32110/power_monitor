@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Device, Alert, EnergyLog, OfficeState } from '@/types'
 import { DashboardTab }     from './tabs/dashboard-tab'
+import { AlertsTab }        from './tabs/alerts-tab'
 import { FloorPlanTab }     from './tabs/floor-plan-tab'
 import { KnowledgeGraphTab } from './tabs/knowledge-graph-tab'
 import { DiscordBotTab }    from './tabs/discord-bot-tab'
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type Tab = 'dashboard' | 'floor-plan' | 'knowledge-graph' | 'discord-bot'
+type Tab = 'dashboard' | 'alerts' | 'floor-plan' | 'knowledge-graph' | 'discord-bot'
 
 interface NavItem {
   id: Tab
@@ -19,11 +20,14 @@ interface NavItem {
 
 // ── Theme hook ────────────────────────────────────────────────────────────────
 function useTheme() {
-  const [dark, setDark] = useState(false)
+  // Default to dark — only switch to light if user explicitly stored 'light'
+  const [dark, setDark] = useState(true)
   useEffect(() => {
     const stored = localStorage.getItem('op-theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (stored === 'dark' || (!stored && prefersDark)) {
+    if (stored === 'light') {
+      setDark(false)
+      document.documentElement.classList.remove('dark')
+    } else {
       setDark(true)
       document.documentElement.classList.add('dark')
     }
@@ -177,6 +181,16 @@ function SideNavItem({ item, active, expanded, onClick }: SideNavItemProps) {
   )
 }
 
+// ── Alert bell icon ───────────────────────────────────────────────────────────
+function IconBell({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+      <path d="M10 2a2 2 0 0 0-2 2c0 0-4 2-4 7v3l-2 2v1h16v-1l-2-2v-3c0-5-4-7-4-7a2 2 0 0 0-2-2z" strokeLinejoin="round" />
+      <path d="M8 18a2 2 0 0 0 4 0" />
+    </svg>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function DashboardClient() {
   const { dark, toggle } = useTheme()
@@ -203,7 +217,8 @@ export function DashboardClient() {
   const alertCount  = alerts.length
 
   const navItems: NavItem[] = [
-    { id: 'dashboard',       label: 'Dashboard',       icon: <IconGrid className="h-5 w-5" />,  badge: alertCount > 0 ? alertCount : undefined },
+    { id: 'dashboard',       label: 'Dashboard',       icon: <IconGrid className="h-5 w-5" /> },
+    { id: 'alerts',          label: 'Alerts',          icon: <IconBell className="h-5 w-5" />, badge: alertCount > 0 ? alertCount : undefined },
     { id: 'floor-plan',      label: 'Floor Plan',      icon: <IconMap className="h-5 w-5" /> },
     { id: 'knowledge-graph', label: 'Knowledge Graph', icon: <IconGraph className="h-5 w-5" /> },
     { id: 'discord-bot',     label: 'Discord Bot',     icon: <IconBot className="h-5 w-5" /> },
@@ -218,26 +233,43 @@ export function DashboardClient() {
           ${sidebarOpen ? 'w-56' : 'w-[60px]'}`}
       >
         {/* Logo + toggle */}
-        <div className="flex h-16 items-center justify-between px-3 flex-shrink-0 border-b border-border">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
-              <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5 text-white" stroke="currentColor" strokeWidth={1.8}>
-                <path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
-            </div>
-            {sidebarOpen && (
-              <span className="slide-in-left truncate text-sm font-semibold text-foreground">
-                Office Pulse
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setSidebarOpen((o) => !o)}
-            aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-            className={`flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface transition-colors ${!sidebarOpen ? 'ml-auto' : ''}`}
-          >
-            <IconChevron className={`h-4 w-4 transition-transform duration-200 ${sidebarOpen ? 'rotate-180' : ''}`} />
-          </button>
+        <div className={`flex h-14 flex-shrink-0 border-b border-border ${sidebarOpen ? 'items-center justify-between px-3' : 'flex-col items-center justify-center gap-1 py-2'}`}>
+          {sidebarOpen ? (
+            <>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-white" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" strokeLinejoin="round" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <span className="slide-in-left truncate text-sm font-semibold text-foreground">
+                  Office Pulse
+                </span>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Collapse sidebar"
+                className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface transition-colors"
+              >
+                <IconChevron className="h-4 w-4 transition-transform duration-200 rotate-180" />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-white" stroke="currentColor" strokeWidth={1.8}>
+                  <path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" strokeLinejoin="round" strokeLinecap="round" />
+                </svg>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Expand sidebar"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface transition-colors"
+              >
+                <IconChevron className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Nav */}
@@ -286,13 +318,13 @@ export function DashboardClient() {
               {navItems.find((n) => n.id === tab)?.label}
             </h1>
             <p className="text-xs text-muted-foreground leading-tight">
-              3 rooms · 15 devices · Supabase persistent
+              3 rooms · 15 devices · Live monitoring
             </p>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
             {alertCount > 0 && (
               <button
-                onClick={() => setTab('dashboard')}
+                onClick={() => setTab('alerts')}
                 className="flex items-center gap-1.5 rounded-full bg-danger/10 border border-danger/20 px-3 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger/15"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-danger live-dot" />
@@ -308,6 +340,9 @@ export function DashboardClient() {
           {tab === 'dashboard' && (
             <DashboardTab devices={devices} alerts={alerts} energy={energy} connected={connected} />
           )}
+          {tab === 'alerts' && (
+            <AlertsTab alerts={alerts} onGoToDashboard={() => setTab('dashboard')} />
+          )}
           {tab === 'floor-plan' && (
             <FloorPlanTab devices={devices} />
           )}
@@ -322,7 +357,7 @@ export function DashboardClient() {
         {/* Footer */}
         <footer className="flex-shrink-0 border-t border-border bg-background px-6 py-2.5 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Office Pulse · Real-time SSE stream · Persisted to Supabase
+            Office Pulse · Live monitoring · State persisted across sessions
           </p>
           <p className="text-xs text-muted-foreground font-mono tabular-nums">
             {lastUpdate

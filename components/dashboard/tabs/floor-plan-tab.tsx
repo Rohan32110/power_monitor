@@ -12,9 +12,6 @@ function GhostMap() {
       <line x1="24" y1="4" x2="24" y2="60" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
       <line x1="44" y1="4" x2="44" y2="60" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
       <line x1="4" y1="32" x2="24" y2="32" stroke="currentColor" strokeWidth="1.5" opacity="0.12" />
-      <rect x="8" y="8" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" opacity="0.10" />
-      <circle cx="34" cy="18" r="4" stroke="currentColor" strokeWidth="1.2" opacity="0.10" />
-      <path d="M46 10l12 0M46 20h8" stroke="currentColor" strokeWidth="1.2" opacity="0.10" strokeLinecap="round" />
     </svg>
   )
 }
@@ -29,33 +26,286 @@ function HeroCard({ devices }: { devices: Device[] }) {
   const lightsOn = lights.filter((d) => d.status).length
 
   return (
-    <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card p-6 mb-5">
-      <div className="pointer-events-none absolute -right-2 -top-2 h-36 w-36 text-primary">
+    <div className="hero-glow relative overflow-hidden rounded-xl border border-border bg-card px-5 py-4 mb-4">
+      <div className="pointer-events-none absolute -right-2 -top-2 h-24 w-24 text-primary">
         <GhostMap />
       </div>
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Office floor plan</p>
-          <h1 className="text-2xl font-bold text-foreground">Top-down view</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Click any device card to toggle. Live state reflects the real-time stream.
-          </p>
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Office floor plan</p>
+          <h1 className="text-xl font-bold text-foreground leading-snug">3D room overview</h1>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Total on', value: `${totalOn}/15` },
-            { label: 'Fans on',  value: `${fansOn}/6` },
-            { label: 'Lights on',value: `${lightsOn}/9` },
+            { label: 'Devices on', value: `${totalOn}/15` },
+            { label: 'Fans on',    value: `${fansOn}/6` },
+            { label: 'Lights on',  value: `${lightsOn}/9` },
             { label: 'Total draw', value: `${totalW}W` },
           ].map(({ label, value }) => (
-            <div key={label} className="flex flex-col items-center rounded-lg border border-border bg-surface px-4 py-2.5 min-w-[72px]">
-              <span className="text-base font-bold tabular-nums text-foreground leading-none">{value}</span>
-              <span className="text-[11px] text-muted-foreground mt-1 whitespace-nowrap">{label}</span>
+            <div key={label} className="flex flex-col items-center rounded-lg border border-border bg-surface px-3 py-2 min-w-[60px]">
+              <span className="text-sm font-bold tabular-nums text-foreground leading-none">{value}</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>
       </div>
     </div>
+  )
+}
+
+// ── 3D isometric room SVG ─────────────────────────────────────────────────────
+// Isometric projection helpers
+// Convert isometric grid (col, row, height) to SVG (x, y)
+const ISO_TILE_W = 80   // width of one tile in iso space
+const ISO_TILE_H = 40   // height of one tile in iso space
+const WALL_H     = 36   // wall height in px
+
+function isoProject(col: number, row: number): { x: number; y: number } {
+  return {
+    x: (col - row) * (ISO_TILE_W / 2),
+    y: (col + row) * (ISO_TILE_H / 2),
+  }
+}
+
+// Draw one isometric box (floor + left wall + right wall + ceiling)
+interface IsoBoxProps {
+  col: number
+  row: number
+  width: number   // in tiles
+  depth: number   // in tiles
+  floorFill: string
+  leftFill: string
+  rightFill: string
+  topFill: string
+  stroke: string
+  opacity?: number
+}
+
+function isoBox({ col, row, width, depth, floorFill, leftFill, rightFill, topFill, stroke, opacity = 1 }: IsoBoxProps) {
+  // Four floor corners
+  const p00 = isoProject(col,         row)
+  const p10 = isoProject(col + width, row)
+  const p01 = isoProject(col,         row + depth)
+  const p11 = isoProject(col + width, row + depth)
+
+  const h = WALL_H
+
+  // Top face (ceiling / roof)
+  const topPath = `M${p00.x},${p00.y} L${p10.x},${p10.y} L${p11.x},${p11.y} L${p01.x},${p01.y} Z`
+
+  // Left face (front-left wall): p01 → p00 (top) offset by -h, then floor
+  const leftPath = `M${p01.x},${p01.y} L${p01.x},${p01.y - h} L${p00.x},${p00.y - h} L${p00.x},${p00.y} Z`
+
+  // Right face (front-right wall): p10 → p11 (top) offset by -h, then floor
+  const rightPath = `M${p10.x},${p10.y} L${p10.x},${p10.y - h} L${p11.x},${p11.y - h} L${p11.x},${p11.y} Z`
+
+  return { topPath, leftPath, rightPath, floorFill, leftFill, rightFill, topFill, stroke, opacity }
+}
+
+// ── Device dot indicators on room top face ────────────────────────────────────
+function deviceDots(
+  col: number, row: number, width: number, depth: number,
+  fans: Device[], lights: Device[]
+): { x: number; y: number; color: string; on: boolean }[] {
+  const dots: { x: number; y: number; color: string; on: boolean }[] = []
+
+  // Place fan dots along top-left quadrant, lights along right quadrant
+  const allDevices: { d: Device; color: string }[] = [
+    ...fans.map((d) => ({ d, color: '#6366F1' })),
+    ...lights.map((d) => ({ d, color: '#F59E0B' })),
+  ]
+
+  allDevices.forEach((item, i) => {
+    const frac = (i + 0.5) / (allDevices.length || 1)
+    // Place dots along a diagonal within the tile
+    const dc = col + frac * width * 0.7 + 0.15 * width
+    const dr = row + frac * depth * 0.4 + 0.1 * depth
+    const pos = isoProject(dc, dr)
+    dots.push({ x: pos.x, y: pos.y - WALL_H - 4, color: item.color, on: item.d.status })
+  })
+  return dots
+}
+
+interface IsoFloorPlanProps {
+  byRoom: Record<string, Device[]>
+  selectedRoom: RoomId | null
+  onSelectRoom: (room: RoomId) => void
+}
+
+function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps) {
+  // Layout: 3 rooms side by side in iso grid
+  // Drawing Room: cols 0–3, rows 0–3
+  // Work Room 1:  cols 4–7, rows 0–3
+  // Work Room 2:  cols 0–3, rows 4–7
+  const rooms: { id: RoomId; col: number; row: number; w: number; d: number }[] = [
+    { id: 'drawing_room', col: 0, row: 0, w: 3, d: 3 },
+    { id: 'work_room_1',  col: 3.2, row: 0, w: 3, d: 3 },
+    { id: 'work_room_2',  col: 1.6, row: 3.2, w: 3, d: 3 },
+  ]
+
+  // Dark theme palette
+  const roomDef: Record<RoomId, { top: string; left: string; right: string }> = {
+    drawing_room: { top: '#1E2436', left: '#252D42', right: '#1A2035' },
+    work_room_1:  { top: '#1A2035', left: '#20283C', right: '#161D30' },
+    work_room_2:  { top: '#1E2436', left: '#252D42', right: '#1A2035' },
+  }
+  const selectedDef: Record<RoomId, { top: string; left: string; right: string }> = {
+    drawing_room: { top: '#272E4A', left: '#2E3655', right: '#222944' },
+    work_room_1:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
+    work_room_2:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
+  }
+
+  // Compute SVG bounds
+  const allPts = rooms.flatMap(({ col, row, w, d }) => [
+    isoProject(col,     row),
+    isoProject(col + w, row),
+    isoProject(col,     row + d),
+    isoProject(col + w, row + d),
+  ])
+  const minX = Math.min(...allPts.map((p) => p.x)) - 20
+  const maxX = Math.max(...allPts.map((p) => p.x)) + 20
+  const minY = Math.min(...allPts.map((p) => p.y)) - WALL_H - 20
+  const maxY = Math.max(...allPts.map((p) => p.y)) + 20
+  const vw = maxX - minX
+  const vh = maxY - minY
+
+  return (
+    <svg
+      viewBox={`${minX} ${minY} ${vw} ${vh}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="w-full"
+      style={{ maxHeight: 320 }}
+      aria-label="3D isometric floor plan"
+    >
+      {/* Defs: glow filter for selected room */}
+      <defs>
+        <filter id="iso-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="iso-glow-sel" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {rooms.map(({ id, col, row, w, d }) => {
+        const isSel = selectedRoom === id
+        const def = isSel ? selectedDef[id] : roomDef[id]
+        const strokeColor = isSel ? '#6366F1' : '#2A3350'
+        const strokeW = isSel ? 1.5 : 0.8
+
+        const box = isoBox({
+          col, row, width: w, depth: d,
+          floorFill: def.top, leftFill: def.left, rightFill: def.right,
+          topFill: def.top, stroke: strokeColor,
+        })
+
+        const fans   = (byRoom[id] ?? []).filter((d) => d.device_type === 'fan')
+        const lights = (byRoom[id] ?? []).filter((d) => d.device_type === 'light')
+        const dots   = deviceDots(col, row, w, d, fans, lights)
+
+        // Clickable hit area over top face
+        const p00 = isoProject(col,     row)
+        const p10 = isoProject(col + w, row)
+        const p01 = isoProject(col,     row + d)
+        const p11 = isoProject(col + w, row + d)
+
+        // Label position: center of top face, raised above walls
+        const cx = (p00.x + p10.x + p01.x + p11.x) / 4
+        const cy = (p00.y + p10.y + p01.y + p11.y) / 4 - WALL_H - 12
+
+        return (
+          <g
+            key={id}
+            onClick={() => onSelectRoom(id)}
+            style={{ cursor: 'pointer' }}
+            filter={isSel ? 'url(#iso-glow-sel)' : undefined}
+          >
+            {/* Right wall */}
+            <path d={box.rightPath} fill={box.rightFill} stroke={strokeColor} strokeWidth={strokeW} />
+            {/* Left wall */}
+            <path d={box.leftPath} fill={box.leftFill} stroke={strokeColor} strokeWidth={strokeW} />
+            {/* Top face */}
+            <path d={box.topPath} fill={box.topFill} stroke={strokeColor} strokeWidth={strokeW} />
+
+            {/* Floor grid lines on top face */}
+            {[0.33, 0.66].map((f) => {
+              const pa = isoProject(col + f * w, row)
+              const pb = isoProject(col + f * w, row + d)
+              const pc = isoProject(col,         row + f * d)
+              const pd = isoProject(col + w,     row + f * d)
+              return (
+                <g key={f}>
+                  <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={strokeColor} strokeWidth={0.4} strokeOpacity={0.4} />
+                  <line x1={pc.x} y1={pc.y} x2={pd.x} y2={pd.y} stroke={strokeColor} strokeWidth={0.4} strokeOpacity={0.4} />
+                </g>
+              )
+            })}
+
+            {/* Device dots */}
+            {dots.map((dot, i) => (
+              <g key={i}>
+                {dot.on && (
+                  <circle cx={dot.x} cy={dot.y} r={5} fill={dot.color} fillOpacity={0.2} />
+                )}
+                <circle
+                  cx={dot.x} cy={dot.y} r={3.5}
+                  fill={dot.on ? dot.color : '#2A3350'}
+                  stroke={dot.on ? dot.color : '#3A4560'}
+                  strokeWidth={0.8}
+                />
+              </g>
+            ))}
+
+            {/* Room label */}
+            <text
+              x={cx} y={cy}
+              textAnchor="middle"
+              fontSize={isSel ? 8.5 : 7.5}
+              fontWeight={isSel ? 700 : 500}
+              fill={isSel ? '#818CF8' : '#94A3B8'}
+              letterSpacing="0.02em"
+            >
+              {ROOM_LABELS[id]}
+            </text>
+
+            {/* Power badge on top face center */}
+            {(() => {
+              const watts = (byRoom[id] ?? []).reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
+              if (watts === 0) return null
+              const bx = (p00.x + p10.x + p01.x + p11.x) / 4
+              const by = (p00.y + p10.y + p01.y + p11.y) / 4 - 6
+              return (
+                <text x={bx} y={by} textAnchor="middle" fontSize={7} fill="#6366F1" fontWeight={600} opacity={0.85}>
+                  {watts}W
+                </text>
+              )
+            })()}
+
+            {/* Transparent hit area */}
+            <path
+              d={box.topPath}
+              fill="transparent"
+              stroke="none"
+            />
+          </g>
+        )
+      })}
+
+      {/* Legend */}
+      <g transform={`translate(${minX + 4}, ${maxY - 22})`}>
+        {[
+          { color: '#6366F1', label: 'Fan ON' },
+          { color: '#F59E0B', label: 'Light ON' },
+        ].map(({ color, label }, i) => (
+          <g key={label} transform={`translate(${i * 70}, 0)`}>
+            <circle cx={5} cy={0} r={4} fill={color} fillOpacity={0.85} />
+            <text x={12} y={4} fontSize={7} fill="#94A3B8">{label}</text>
+          </g>
+        ))}
+      </g>
+    </svg>
   )
 }
 
@@ -66,7 +316,7 @@ function DeviceTile({ device }: { device: Device }) {
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 min-h-[88px] transition-all duration-300 select-none
+      className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 min-h-[80px] transition-all duration-300 select-none
         ${on
           ? isFan
             ? 'border-primary/40 bg-primary/8 shadow-sm'
@@ -74,19 +324,21 @@ function DeviceTile({ device }: { device: Device }) {
           : 'border-border bg-surface opacity-50'
         }`}
     >
-      {/* Glow ring when on */}
       {on && (
         <span className={`absolute inset-0 rounded-xl pointer-events-none ring-1 ${isFan ? 'ring-primary/30' : 'ring-warning/30'}`} />
       )}
 
       {isFan ? (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}
-          className={`h-7 w-7 ${on ? 'text-primary fan-spin' : 'text-muted-foreground'}`}>
-          <path d="M12 12c0-3 2-7.5 5.5-7.5S21.5 8 19 10c3 1.5 7.5 2 7.5 5.5s-3.5 4.5-5.5 2c-1.5 3-2 7.5-5.5 7.5S11 21.5 5 19c1.5-3 2-7.5 5.5-7.5S4.5 12 2 12 7.5 2 12 12z" />
+        <svg viewBox="0 0 24 24" fill="currentColor"
+          className={`h-6 w-6 ${on ? 'text-primary fan-spin' : 'text-muted-foreground'}`}>
+          <circle cx="12" cy="12" r="2" />
+          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" />
+          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(120 12 12)" />
+          <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(240 12 12)" />
         </svg>
       ) : (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}
-          className={`h-7 w-7 ${on ? 'text-warning' : 'text-muted-foreground'}`}>
+          className={`h-6 w-6 ${on ? 'text-warning' : 'text-muted-foreground'}`}>
           <path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 4 12.65V18H8v-3.35A7 7 0 0 1 12 2z" />
         </svg>
       )}
@@ -120,15 +372,14 @@ function RoomBlock({ room, devices, selected, onSelect }: {
           : 'border-border bg-card hover:border-border/80 hover:shadow-sm'
         }`}
     >
-      {/* Room header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">{ROOM_LABELS[room]}</h3>
           <p className="text-[11px] text-muted-foreground mt-0.5">{onCount}/{devices.length} active</p>
         </div>
         <div className="text-right">
-          <span className="text-base font-bold tabular-nums text-foreground font-mono">{roomWatts}W</span>
-          <div className="h-1 w-16 rounded-full bg-surface mt-1 overflow-hidden">
+          <span className="text-sm font-bold tabular-nums text-foreground font-mono">{roomWatts}W</span>
+          <div className="h-1 w-14 rounded-full bg-surface mt-1 overflow-hidden">
             <div
               className="h-full rounded-full bg-primary transition-all duration-500"
               style={{ width: `${Math.min((roomWatts / 165) * 100, 100)}%` }}
@@ -137,7 +388,6 @@ function RoomBlock({ room, devices, selected, onSelect }: {
         </div>
       </div>
 
-      {/* Fans row */}
       <div className="mb-2">
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Fans</p>
         <div className="grid grid-cols-2 gap-1.5">
@@ -145,7 +395,6 @@ function RoomBlock({ room, devices, selected, onSelect }: {
         </div>
       </div>
 
-      {/* Lights row */}
       <div>
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Lights</p>
         <div className="grid grid-cols-3 gap-1.5">
@@ -174,11 +423,34 @@ export function FloorPlanTab({ devices }: { devices: Device[] }) {
   const selectedDevices = selectedRoom ? (byRoom[selectedRoom] ?? []) : []
 
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-4">
       <HeroCard devices={devices} />
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-4 px-1">
+      {/* 3D Isometric floor plan */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">3D floor view</p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-primary inline-block" />
+              Fan
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-warning inline-block" />
+              Light
+            </span>
+            <span className="text-muted-foreground/60">Click a room to inspect</span>
+          </div>
+        </div>
+        <IsoFloorPlan
+          byRoom={byRoom}
+          selectedRoom={selectedRoom}
+          onSelectRoom={(r) => setSelectedRoom(selectedRoom === r ? null : r)}
+        />
+      </div>
+
+      {/* Legend strip */}
+      <div className="flex items-center gap-4 px-1">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="h-2.5 w-2.5 rounded-sm bg-primary/20 border border-primary/40" />
           Fan ON
@@ -191,10 +463,9 @@ export function FloorPlanTab({ devices }: { devices: Device[] }) {
           <span className="h-2.5 w-2.5 rounded-sm bg-surface border border-border opacity-50" />
           OFF
         </div>
-        <span className="text-xs text-muted-foreground ml-auto">Click a room to inspect</span>
       </div>
 
-      {/* 3-room grid */}
+      {/* 3-room device grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {ROOMS.map((room) => (
           <RoomBlock
@@ -209,7 +480,7 @@ export function FloorPlanTab({ devices }: { devices: Device[] }) {
 
       {/* Room detail panel */}
       {selectedRoom && selectedDevices.length > 0 && (
-        <div className="mt-4 rounded-xl border border-primary/20 bg-card p-5">
+        <div className="rounded-xl border border-primary/20 bg-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-semibold text-foreground">{ROOM_LABELS[selectedRoom]} — Detail</h3>
@@ -225,7 +496,7 @@ export function FloorPlanTab({ devices }: { devices: Device[] }) {
           <div className="flex flex-col gap-1.5">
             {selectedDevices.map((d) => {
               const minutesOn = d.status
-                ? Math.round((Date.now() - new Date(d.last_changed).getTime()) / 60000)
+                ? Math.max(0, Math.round((Date.now() - new Date(d.last_changed).getTime()) / 60000))
                 : null
               return (
                 <div key={d.id} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
