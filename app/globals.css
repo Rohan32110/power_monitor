@@ -4,131 +4,137 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Colors */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
+  /* ── Colors ── */
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-sidebar:           var(--sidebar);
+  --color-sidebar-foreground:var(--sidebar-foreground);
+  --color-border:            var(--border);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-accent:            var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-destructive: var(--destructive);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-surface: var(--surface);
-  --color-on: var(--on);
-  --color-warning: var(--warning);
-  --color-danger: var(--danger);
-  /* Aliases for Tailwind utility classes */
-  --color-on-foreground: #FFFFFF;
-  --color-warning-foreground: #FFFFFF;
+  --color-primary:           var(--primary);
+  --color-primary-foreground:var(--primary-foreground);
+  --color-surface:           var(--surface);
+  --color-on:                var(--on);
+  --color-on-foreground:     #FFFFFF;
+  --color-warning:           var(--warning);
+  --color-warning-foreground:#FFFFFF;
+  --color-danger:            var(--danger);
   --color-danger-foreground: #FFFFFF;
+  --color-destructive:       var(--danger);
+  --color-ring:              var(--primary);
+  --color-input:             var(--border);
 
-  /* Radius */
+  /* ── Radius ── */
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.5);
-
-  /* Fonts — the CSS vars --font-sans / --font-mono are injected by Next.js font loader */
-  /* They resolve to the Geist font family automatically via the variable= option */
 }
 
-/* ── Light theme (default) ───────────────────────────────────── */
+/* ── Light theme ─────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --background: #FAFAFA;
-  --foreground: #09090B;
-  --card: #FFFFFF;
-  --card-foreground: #09090B;
-  --surface: #F4F4F5;
-  --border: #E4E4E7;
-  --muted: #F4F4F5;
-  --muted-foreground: #71717A;
-  --primary: #4F46E5;
+  --background:         #F8FAFC;
+  --foreground:         #0F172A;
+  --card:               #FFFFFF;
+  --card-foreground:    #0F172A;
+  --sidebar:            #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --surface:            #F1F5F9;
+  --border:             #E2E8F0;
+  --muted:              #F1F5F9;
+  --muted-foreground:   #64748B;
+  --primary:            #4F46E5;
   --primary-foreground: #FFFFFF;
-  --accent: #4F46E5;
-  --accent-foreground: #FFFFFF;
-  --destructive: #DC2626;
-  --ring: #4F46E5;
-  --input: #E4E4E7;
-  --on: #16A34A;
-  --warning: #D97706;
-  --danger: #DC2626;
-  --radius: 0.5rem;
+  --accent:             #EEF2FF;
+  --accent-foreground:  #4F46E5;
+  --on:                 #16A34A;
+  --warning:            #D97706;
+  --danger:             #DC2626;
+  --radius:             0.625rem;
 }
 
 /* ── Dark theme ──────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
-  --background: #09090B;
-  --foreground: #FAFAFA;
-  --card: #18181B;
-  --card-foreground: #FAFAFA;
-  --surface: #27272A;
-  --border: #27272A;
-  --muted: #27272A;
-  --muted-foreground: #A1A1AA;
-  --primary: #6366F1;
+  --background:         #0B0F1A;
+  --foreground:         #F1F5F9;
+  --card:               #141827;
+  --card-foreground:    #F1F5F9;
+  --sidebar:            #10131F;
+  --sidebar-foreground: #F1F5F9;
+  --surface:            #1E2436;
+  --border:             #1E2436;
+  --muted:              #1E2436;
+  --muted-foreground:   #94A3B8;
+  --primary:            #6366F1;
   --primary-foreground: #FFFFFF;
-  --accent: #6366F1;
-  --accent-foreground: #FFFFFF;
-  --destructive: #EF4444;
-  --ring: #6366F1;
-  --input: #27272A;
-  --on: #22C55E;
-  --warning: #F59E0B;
-  --danger: #EF4444;
+  --accent:             #1E2040;
+  --accent-foreground:  #818CF8;
+  --on:                 #22C55E;
+  --warning:            #F59E0B;
+  --danger:             #EF4444;
 }
 
-/* ── Base layer ──────────────────────────────────────────────── */
+/* ── Base ────────────────────────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  *, *::before, *::after {
     box-sizing: border-box;
+    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
-  h1, h2, h3, h4 {
-    @apply tracking-tight;
-  }
+  h1, h2, h3, h4, h5 { @apply tracking-tight font-semibold; }
 }
 
-/* ── Fan spin animation ──────────────────────────────────────── */
-@keyframes fan-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.fan-spin {
-  animation: fan-spin 2s linear infinite;
-  transform-origin: center;
-}
-
-/* ── Live dot pulse ──────────────────────────────────────────── */
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.live-dot {
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
-/* ── Number transition ───────────────────────────────────────── */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Scrollbar (minimal) ─────────────────────────────────────── */
+/* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* ── Animations ──────────────────────────────────────────────── */
+@keyframes fan-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.fan-spin {
+  animation: fan-spin 1.8s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+.live-dot { animation: live-pulse 2s ease-in-out infinite; }
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-left { animation: slide-in-left 0.22s ease-out; }
+
+/* ── Sidebar transition ──────────────────────────────────────── */
+.sidebar-transition { transition: width 0.22s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── Number rendering ────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ── Hero card glow ──────────────────────────────────────────── */
+.hero-glow {
+  box-shadow: 0 0 0 1px var(--border), 0 4px 24px -4px rgba(79,70,229,0.12);
+}
+.dark .hero-glow {
+  box-shadow: 0 0 0 1px var(--border), 0 4px 32px -4px rgba(99,102,241,0.18);
+}

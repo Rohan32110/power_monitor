@@ -1,4 +1,19 @@
-import { getOfficeState, simulateTick } from '@/lib/simulator'
+import { getOfficeState, simulateTick, getDevices, getActiveAlerts, getEnergyData } from '@/lib/simulator'
+import { persistDeviceStates, persistEnergyLog, persistAlert } from '@/lib/supabase/persistor'
+
+async function persistCurrentState() {
+  try {
+    const devices = getDevices()
+    const energy  = getEnergyData()
+    const alerts  = getActiveAlerts()
+    await persistDeviceStates(devices)
+    await persistEnergyLog(energy.total_watts, energy.room_watts, energy.today_kwh)
+    for (const a of alerts) await persistAlert(a)
+  } catch (e) {
+    // Non-fatal — don't crash the SSE stream
+    console.error('[stream] persist error:', (e as Error).message)
+  }
+}
 
 /**
  * GET /api/stream
@@ -23,9 +38,10 @@ export async function GET() {
         }
       }
 
-      // Tick the simulator every 8 seconds
+      // Tick the simulator every 8 seconds + persist to Supabase
       const tickInterval = setInterval(() => {
         simulateTick()
+        void persistCurrentState()
       }, 8000)
 
       // Send state every 4 seconds (so UI updates after each tick, plus a midpoint refresh)
