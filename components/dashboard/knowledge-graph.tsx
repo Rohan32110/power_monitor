@@ -1,23 +1,5 @@
 'use client'
 
-/**
- * Knowledge Graph — D3 force-directed graph
- *
- * Bug fixed: The previous implementation called simulation.alphaTarget(0.3).restart()
- * inside the drag "start" handler, which re-heated the simulation every time a node
- * was touched. Because devices update every 8s and the graph was re-initialised each
- * time, the simulation was constantly warm and nodes never came to rest.
- *
- * Fix:
- *   1. The simulation runs ONCE with a high alpha and decays to rest (alphaDecay 0.04).
- *      It does NOT restart when devices change — only node colours/labels update in place.
- *   2. Drag: we only set alphaTarget(0.3) while the user is actively dragging, and
- *      reset it to 0 on drag end. This keeps dragged nodes responsive without
- *      rehitting every other node.
- *   3. Node positions (x/y) are preserved between device-data refreshes so the
- *      layout is stable.
- */
-
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as d3 from 'd3'
 import type { Device, KGNode, KGLink } from '@/types'
@@ -27,7 +9,6 @@ interface Props {
   devices: Device[]
 }
 
-// ── Build graph from devices ─────────────────────────────────
 function buildGraph(devices: Device[]): { nodes: KGNode[]; links: KGLink[] } {
   const nodes: KGNode[] = []
   const links: KGLink[] = []
@@ -53,24 +34,25 @@ function buildGraph(devices: Device[]): { nodes: KGNode[]; links: KGLink[] } {
   return { nodes, links }
 }
 
-const NODE_R: Record<string, number> = {
-  office: 26,
-  room: 18,
-  fan: 12,
-  light: 12,
-}
+const NODE_R: Record<string, number> = { office: 26, room: 18, fan: 12, light: 12 }
 
-// Node fill/stroke — uses CSS variables so it works in light and dark
 function nodeColors(n: KGNode) {
-  if (n.type === 'office') return { fill: 'hsl(239 84% 67% / 0.12)', stroke: '#6366F1', text: '#6366F1' }
-  if (n.type === 'room') return { fill: 'hsl(239 84% 67% / 0.07)', stroke: '#818CF8', text: '#818CF8' }
-  if (n.type === 'fan') return n.status
-    ? { fill: 'hsl(239 84% 67% / 0.1)', stroke: '#6366F1', text: '#6366F1' }
-    : { fill: 'transparent', stroke: '#D4D4D8', text: '#A1A1AA' }
+  if (n.type === 'office') return { fill: 'rgba(79,70,229,0.12)', stroke: '#4F46E5' }
+  if (n.type === 'room')   return { fill: 'rgba(99,102,241,0.08)', stroke: '#818CF8' }
+  if (n.type === 'fan')    return n.status
+    ? { fill: 'rgba(79,70,229,0.1)', stroke: '#4F46E5' }
+    : { fill: 'rgba(0,0,0,0)',       stroke: '#D4D4D8' }
   // light
   return n.status
-    ? { fill: 'hsl(43 96% 56% / 0.12)', stroke: '#F59E0B', text: '#F59E0B' }
-    : { fill: 'transparent', stroke: '#D4D4D8', text: '#A1A1AA' }
+    ? { fill: 'rgba(245,158,11,0.12)', stroke: '#F59E0B' }
+    : { fill: 'rgba(0,0,0,0)',         stroke: '#D4D4D8' }
+}
+
+function nodeTextColor(n: KGNode) {
+  if (n.type === 'office') return '#4F46E5'
+  if (n.type === 'room')   return '#818CF8'
+  if (n.type === 'fan')    return n.status ? '#4F46E5' : '#A1A1AA'
+  return n.status ? '#F59E0B' : '#A1A1AA'
 }
 
 function linkColor(tgt: KGNode) {
@@ -79,194 +61,190 @@ function linkColor(tgt: KGNode) {
 }
 
 export function KnowledgeGraph({ devices }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null)
+  const svgRef       = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const simRef = useRef<d3.Simulation<KGNode, KGLink> | null>(null)
-  // Stable node positions — preserved across device updates
-  const nodePositionsRef = useRef<Map<string, { x: number; y: number; fx?: number | null; fy?: number | null }>>(new Map())
-  const initializedRef = useRef(false)
+  const simRef       = useRef<d3.Simulation<KGNode, KGLink> | null>(null)
+  // Stable positions persist across device updates
+  const posRef       = useRef<Map<string, { x: number; y: number; fx?: number | null; fy?: number | null }>>(new Map())
+  const mountedRef   = useRef(false)
 
   const [selectedNode, setSelectedNode] = useState<KGNode | null>(null)
 
-  // ── One-time graph initialisation ─────────────────────────
-  const initGraph = useCallback(() => {
+  // ── Build the D3 graph (called ONCE after the container has real dimensions) ──
+  const initGraph = useCallback((W: number, H: number) => {
     const svg = svgRef.current
-    const container = containerRef.current
-    if (!svg || !container) return
-
-    const W = container.clientWidth || 720
-    const H = 480
-
-    d3.select(svg).selectAll('*').remove()
+    if (!svg) return
 
     const graph = buildGraph(devices)
 
-    // Restore saved positions
+    // Restore saved positions into nodes
     const nodes: KGNode[] = graph.nodes.map((n) => {
-      const saved = nodePositionsRef.current.get(n.id)
-      return { ...n, x: saved?.x, y: saved?.y, fx: saved?.fx ?? null, fy: saved?.fy ?? null }
+      const s = posRef.current.get(n.id)
+      return { ...n, x: s?.x, y: s?.y, fx: s?.fx ?? null, fy: s?.fy ?? null }
     })
     const links: KGLink[] = graph.links.map((l) => ({ ...l }))
+
+    d3.select(svg).selectAll('*').remove()
 
     const svgEl = d3.select(svg)
       .attr('width', W)
       .attr('height', H)
       .attr('viewBox', `0 0 ${W} ${H}`)
 
-    // Defs — arrowhead
+    // Arrow marker
     const defs = svgEl.append('defs')
     defs.append('marker')
       .attr('id', 'kg-arrow')
       .attr('viewBox', '0 -4 8 8')
-      .attr('refX', 20)
+      .attr('refX', 22)
       .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('markerWidth', 5)
+      .attr('markerHeight', 5)
       .attr('orient', 'auto')
       .append('path')
       .attr('d', 'M0,-4L8,0L0,4')
       .attr('fill', '#A1A1AA')
-      .attr('fill-opacity', '0.5')
+      .attr('fill-opacity', '0.45')
 
-    // Zoom/pan group
+    // Zoom group
     const g = svgEl.append('g')
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 2.5])
+      .scaleExtent([0.25, 3])
       .on('zoom', (ev) => g.attr('transform', ev.transform))
     svgEl.call(zoom)
+    // Default scale so graph is centred
+    svgEl.call(zoom.transform, d3.zoomIdentity.translate(W * 0.05, H * 0.05).scale(0.9))
+
     svgEl.on('click', () => setSelectedNode(null))
 
-    // ── Force simulation ─────────────────────────────────────
-    // alphaDecay 0.04 means it settles in ~60 ticks (a few seconds) then stops.
-    // We do NOT call restart() or raise alphaTarget externally — only drag does that.
-    const simulation = d3.forceSimulation<KGNode>(nodes)
-      .alphaDecay(0.04)
-      .force('link', d3.forceLink<KGNode, KGLink>(links)
-        .id((d) => d.id)
-        .distance((l) => {
-          const s = l.source as KGNode
-          return s.type === 'office' ? 150 : 90
-        })
-        .strength(0.6)
+    // ── Simulation ────────────────────────────────────────────────────────────
+    // alphaDecay 0.035 → settles in ~70 ticks (~2s). Never restarted externally.
+    const sim = d3.forceSimulation<KGNode>(nodes)
+      .alphaDecay(0.035)
+      .force('link',
+        d3.forceLink<KGNode, KGLink>(links)
+          .id((d) => d.id)
+          .distance((l) => (l.source as KGNode).type === 'office' ? 140 : 80)
+          .strength(0.55)
       )
-      .force('charge', d3.forceManyBody().strength(-320))
-      .force('center', d3.forceCenter(W / 2, H / 2).strength(0.05))
-      .force('collide', d3.forceCollide<KGNode>((d) => NODE_R[d.type] + 16))
+      .force('charge', d3.forceManyBody().strength(-280))
+      .force('center', d3.forceCenter(W / 2, H / 2).strength(0.06))
+      .force('collide', d3.forceCollide<KGNode>((d) => NODE_R[d.type] + 18))
 
-    simRef.current = simulation
+    simRef.current = sim
 
-    // ── Links ────────────────────────────────────────────────
+    // ── Links ─────────────────────────────────────────────────────────────────
     const linkG = g.append('g')
     const linkEl = linkG.selectAll<SVGLineElement, KGLink>('line')
-      .data(links)
+      .data(links, (l) => `${(l.source as KGNode).id ?? l.source}-${(l.target as KGNode).id ?? l.target}`)
       .join('line')
       .attr('stroke', (l) => linkColor(l.target as KGNode))
       .attr('stroke-width', 1)
       .attr('stroke-opacity', 0.4)
       .attr('stroke-dasharray', (l) => {
         const t = l.target as KGNode
-        return (t.type === 'fan' || t.type === 'light') && !t.status ? '4,4' : 'none'
+        return (t.type === 'fan' || t.type === 'light') && !t.status ? '4,3' : 'none'
       })
       .attr('marker-end', 'url(#kg-arrow)')
 
-    // Link labels
     const linkLabelEl = linkG.selectAll<SVGTextElement, KGLink>('text')
       .data(links)
       .join('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', -4)
+      .attr('dy', -5)
       .attr('font-size', 8)
-      .attr('font-family', 'monospace')
+      .attr('font-family', 'ui-monospace, monospace')
       .attr('fill', '#A1A1AA')
-      .attr('fill-opacity', 0.6)
+      .attr('fill-opacity', 0.55)
       .attr('pointer-events', 'none')
       .text((l) => l.label)
 
-    // ── Nodes ────────────────────────────────────────────────
+    // ── Nodes ─────────────────────────────────────────────────────────────────
     const nodeG = g.append('g')
     const nodeEl = nodeG.selectAll<SVGGElement, KGNode>('g.node')
-      .data(nodes)
+      .data(nodes, (d) => d.id)
       .join('g')
       .attr('class', 'node')
       .style('cursor', 'grab')
 
-    // Glow ring for ON devices
+    // Glow halo for ON devices
     nodeEl.filter((d) => (d.type === 'fan' || d.type === 'light') && !!d.status)
       .append('circle')
-      .attr('r', (d) => NODE_R[d.type] + 7)
+      .attr('r', (d) => NODE_R[d.type] + 8)
       .attr('fill', 'none')
-      .attr('stroke', (d) => d.type === 'light' ? '#F59E0B' : '#6366F1')
+      .attr('stroke', (d) => d.type === 'light' ? '#F59E0B' : '#4F46E5')
       .attr('stroke-width', 1)
-      .attr('stroke-opacity', 0.2)
+      .attr('stroke-opacity', 0.18)
 
     // Main circle
     nodeEl.append('circle')
       .attr('r', (d) => NODE_R[d.type])
       .attr('fill', (d) => nodeColors(d).fill)
       .attr('stroke', (d) => nodeColors(d).stroke)
-      .attr('stroke-width', (d) => (d.type === 'office' || d.type === 'room') ? 1.5 : 1)
+      .attr('stroke-width', (d) => d.type === 'office' || d.type === 'room' ? 1.5 : 1)
 
-    // Icon text
+    // Icon / abbreviation
     nodeEl.append('text')
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')
-      .attr('font-size', (d) => d.type === 'office' ? 13 : d.type === 'room' ? 10 : 8)
-      .attr('fill', (d) => nodeColors(d).text)
+      .attr('font-size', (d) => d.type === 'office' ? 11 : d.type === 'room' ? 9 : 8)
+      .attr('font-weight', 600)
+      .attr('font-family', 'ui-sans-serif, system-ui, sans-serif')
+      .attr('fill', (d) => nodeTextColor(d))
       .attr('pointer-events', 'none')
       .text((d) => {
         if (d.type === 'office') return 'HQ'
-        if (d.type === 'room') return d.label.split(' ')[0] // "Drawing" / "Work"
+        if (d.type === 'room')   return d.label.split(' ')[0].slice(0, 4)
         return d.type === 'fan' ? 'F' : 'L'
       })
 
-    // Label below
+    // Label below node
     nodeEl.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', (d) => NODE_R[d.type] + 13)
+      .attr('dy', (d) => NODE_R[d.type] + 14)
       .attr('font-size', (d) => d.type === 'office' ? 10 : 9)
       .attr('font-weight', (d) => d.type === 'office' || d.type === 'room' ? 600 : 400)
-      .attr('font-family', 'system-ui, sans-serif')
-      .attr('fill', (d) => nodeColors(d).text)
-      .attr('fill-opacity', (d) => d.type === 'office' || d.type === 'room' ? 1 : 0.8)
+      .attr('font-family', 'ui-sans-serif, system-ui, sans-serif')
+      .attr('fill', (d) => nodeTextColor(d))
       .attr('pointer-events', 'none')
       .text((d) => d.label)
 
-    // Wattage label for ON devices
+    // Wattage above ON devices
     nodeEl.filter((d) => (d.type === 'fan' || d.type === 'light') && !!d.status)
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', (d) => -NODE_R[d.type] - 5)
       .attr('font-size', 7)
-      .attr('font-family', 'monospace')
+      .attr('font-family', 'ui-monospace, monospace')
       .attr('fill', '#22C55E')
-      .attr('fill-opacity', 0.9)
       .attr('pointer-events', 'none')
       .text((d) => `${d.wattage}W`)
 
-    // ── Drag ─────────────────────────────────────────────────
-    // Only heat simulation during actual drag; cool immediately on release.
+    // ── Drag ─────────────────────────────────────────────────────────────────
+    // Key fix: only set alphaTarget during drag, reset to 0 on end.
+    // Nodes stay fixed (fx/fy set on drag end) so they don't drift after release.
     const drag = d3.drag<SVGGElement, KGNode>()
       .on('start', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.2).restart()
+        if (!event.active) sim.alphaTarget(0.15).restart()
         d.fx = d.x
         d.fy = d.y
-        d3.select<SVGGElement, KGNode>(event.sourceEvent.target.closest('g.node') as SVGGElement)
-          .style('cursor', 'grabbing')
+        d3.select<SVGGElement, KGNode>(event.currentTarget).style('cursor', 'grabbing')
       })
       .on('drag', (event, d) => {
         d.fx = event.x
         d.fy = event.y
       })
       .on('end', (event, d) => {
-        // Cool down immediately — crucial fix for stability
-        if (!event.active) simulation.alphaTarget(0)
-        // Pin the node where the user left it so it stays put
+        // Immediately cool — prevents continued floating after drop
+        if (!event.active) sim.alphaTarget(0)
+        // Pin to where user dropped it
         d.fx = event.x
         d.fy = event.y
-        nodePositionsRef.current.set(d.id, { x: d.x ?? 0, y: d.y ?? 0, fx: d.fx, fy: d.fy })
+        posRef.current.set(d.id, { x: d.x ?? 0, y: d.y ?? 0, fx: d.fx, fy: d.fy })
+        d3.select<SVGGElement, KGNode>(event.currentTarget).style('cursor', 'grab')
       })
 
-    nodeEl.call(drag as any)
+    nodeEl.call(drag as never)
 
     // Click to select
     nodeEl.on('click', (event, d) => {
@@ -274,8 +252,8 @@ export function KnowledgeGraph({ devices }: Props) {
       setSelectedNode((prev) => (prev?.id === d.id ? null : { ...d }))
     })
 
-    // ── Tick ─────────────────────────────────────────────────
-    simulation.on('tick', () => {
+    // ── Tick ─────────────────────────────────────────────────────────────────
+    sim.on('tick', () => {
       linkEl
         .attr('x1', (l) => (l.source as KGNode).x ?? 0)
         .attr('y1', (l) => (l.source as KGNode).y ?? 0)
@@ -285,50 +263,64 @@ export function KnowledgeGraph({ devices }: Props) {
         .attr('x', (l) => (((l.source as KGNode).x ?? 0) + ((l.target as KGNode).x ?? 0)) / 2)
         .attr('y', (l) => (((l.source as KGNode).y ?? 0) + ((l.target as KGNode).y ?? 0)) / 2)
       nodeEl.attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
-
-      // Persist positions while simulation is running
+      // Persist positions continuously for when devices update
       nodes.forEach((n) => {
-        if (n.x !== undefined) nodePositionsRef.current.set(n.id, { x: n.x, y: n.y ?? 0, fx: n.fx, fy: n.fy })
+        if (n.x !== undefined) posRef.current.set(n.id, { x: n.x, y: n.y ?? 0, fx: n.fx, fy: n.fy })
       })
     })
 
-    return () => simulation.stop()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // intentionally empty — only runs ONCE on mount
+    return () => sim.stop()
+  }, [devices]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Initial mount ─────────────────────────────────────────
+  // ── Mount: wait for real container width, then init ONCE ─────────────────
   useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-    const cleanup = initGraph()
-    return cleanup
+    if (mountedRef.current) return
+    const container = containerRef.current
+    if (!container) return
+
+    // Use ResizeObserver to catch when the container first gets painted width
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect
+      if (width > 10 && !mountedRef.current) {
+        mountedRef.current = true
+        ro.disconnect()
+        const cleanup = initGraph(Math.floor(width), Math.max(480, Math.floor(height)))
+        return cleanup
+      }
+    })
+    ro.observe(container)
+
+    return () => {
+      ro.disconnect()
+      simRef.current?.stop()
+    }
   }, [initGraph])
 
-  // ── Device updates: patch colours/labels WITHOUT reinitialising ──
+  // ── Device status updates: patch in-place WITHOUT re-running simulation ──
   useEffect(() => {
     if (!svgRef.current) return
     const svg = d3.select(svgRef.current)
 
-    devices.forEach((dev) => {
-      const g = svg.select<SVGGElement>(`g.node[data-id="${dev.id}"]`)
-      if (g.empty()) return
-      // We can't easily select by data-id since we didn't set it; rely on full re-render
-    })
-    // Full visual re-render is handled by initGraph when component first mounts.
-    // Device status changes are reflected via node attribute updates below.
-
+    // Patch node visual attributes
     svg.selectAll<SVGGElement, KGNode>('g.node').each(function (d) {
       if (!d) return
       const match = devices.find((dev) => dev.id === d.id)
       if (!match) return
       d.status = match.status
-
-      const gSel = d3.select(this)
+      const sel = d3.select(this)
       const c = nodeColors(d)
-      gSel.select('circle:first-of-type').attr('fill', c.fill).attr('stroke', c.stroke)
+      // Update main circle (second child — first may be the glow halo)
+      sel.selectAll('circle').each(function (_, i) {
+        const el = d3.select(this)
+        const r = parseFloat(el.attr('r') ?? '0')
+        // Main circle has r === NODE_R[d.type]
+        if (r === NODE_R[d.type]) {
+          el.attr('fill', c.fill).attr('stroke', c.stroke)
+        }
+      })
     })
 
-    // Update link labels + colours
+    // Patch link colours
     svg.selectAll<SVGLineElement, KGLink>('line').each(function (l) {
       if (!l) return
       const tgt = l.target as KGNode
@@ -337,11 +329,18 @@ export function KnowledgeGraph({ devices }: Props) {
       tgt.status = match.status
       d3.select(this)
         .attr('stroke', linkColor(tgt))
-        .attr('stroke-dasharray', !tgt.status && (tgt.type === 'fan' || tgt.type === 'light') ? '4,4' : 'none')
+        .attr('stroke-dasharray', !tgt.status && (tgt.type === 'fan' || tgt.type === 'light') ? '4,3' : 'none')
+    })
+
+    // Update selected node panel if its device changed
+    setSelectedNode((prev) => {
+      if (!prev) return null
+      const match = devices.find((dev) => dev.id === prev.id)
+      return match ? { ...prev, status: match.status } : prev
     })
   }, [devices])
 
-  const onCount = devices.filter((d) => d.status).length
+  const onCount    = devices.filter((d) => d.status).length
   const totalWatts = devices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
 
   return (
@@ -370,13 +369,11 @@ export function KnowledgeGraph({ devices }: Props) {
       {/* Canvas */}
       <div
         ref={containerRef}
-        className="relative rounded-md bg-surface overflow-hidden border border-border"
-        style={{ height: 480 }}
+        className="relative rounded-md bg-surface overflow-hidden border border-border w-full"
+        style={{ height: 500 }}
       >
-        <svg ref={svgRef} className="w-full h-full block" />
-
-        {/* Double-click hint */}
-        <p className="absolute bottom-2 right-3 text-[10px] text-muted-foreground pointer-events-none">
+        <svg ref={svgRef} className="block w-full h-full" />
+        <p className="absolute bottom-2 right-3 text-[10px] text-muted-foreground pointer-events-none select-none">
           Scroll to zoom · drag nodes · click for details
         </p>
       </div>
@@ -393,7 +390,7 @@ export function KnowledgeGraph({ devices }: Props) {
               Dismiss
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             <span className="text-[11px] text-muted-foreground">Type</span>
             <span className="text-[11px] text-foreground capitalize">{selectedNode.type}</span>
             {selectedNode.room && (
@@ -433,14 +430,19 @@ export function KnowledgeGraph({ devices }: Props) {
       {/* Legend */}
       <div className="flex items-center gap-5 flex-wrap border-t border-border pt-4">
         {[
-          { stroke: '#6366F1', fill: 'hsl(239 84% 67% / 0.12)', label: 'Office / Room' },
-          { stroke: '#6366F1', fill: 'hsl(239 84% 67% / 0.1)', label: 'Fan ON' },
-          { stroke: '#F59E0B', fill: 'hsl(43 96% 56% / 0.12)', label: 'Light ON' },
-          { stroke: '#D4D4D8', fill: 'transparent', label: 'Device OFF', dashed: true },
+          { stroke: '#4F46E5', fill: 'rgba(79,70,229,0.1)',  label: 'Office / Room' },
+          { stroke: '#4F46E5', fill: 'rgba(79,70,229,0.08)', label: 'Fan ON' },
+          { stroke: '#F59E0B', fill: 'rgba(245,158,11,0.1)', label: 'Light ON' },
+          { stroke: '#D4D4D8', fill: 'transparent',          label: 'Device OFF', dashed: true },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 14 14">
-              <circle cx="7" cy="7" r="5.5" fill={l.fill} stroke={l.stroke} strokeWidth="1.2" strokeDasharray={l.dashed ? '3,2' : 'none'} />
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+              <circle cx="7" cy="7" r="5.5"
+                fill={l.fill}
+                stroke={l.stroke}
+                strokeWidth="1.2"
+                strokeDasharray={l.dashed ? '3,2' : 'none'}
+              />
             </svg>
             <span className="text-[11px] text-muted-foreground">{l.label}</span>
           </div>

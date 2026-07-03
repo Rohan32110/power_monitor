@@ -1,5 +1,3 @@
-'use client'
-
 import type { Device, Alert, OfficeState, RoomId } from '@/types'
 import {
   WATTAGE,

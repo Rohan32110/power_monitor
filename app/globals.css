@@ -34,9 +34,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.5);
 
-  /* Fonts */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Fonts — the CSS vars --font-sans / --font-mono are injected by Next.js font loader */
+  /* They resolve to the Geist font family automatically via the variable= option */
 }
 
 /* ── Light theme (default) ───────────────────────────────────── */
