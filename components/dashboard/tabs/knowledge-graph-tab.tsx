@@ -140,9 +140,14 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
     return n.status ? '#22C55E' : '#94A3B8'
   }
 
+  // Store latest devices in a ref so initGraph always uses current data
+  // without re-triggering the effect when devices stream in
+  const devicesRef = useRef(devices)
+  devicesRef.current = devices
+
   const initGraph = useCallback((width: number, height: number) => {
     if (!svgRef.current) return
-    const { nodes, links } = buildGraph(devices)
+    const { nodes, links } = buildGraph(devicesRef.current)
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
@@ -174,24 +179,45 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
 
     // Zoom group
     const g = svg.append('g')
-    svg.call(
-      d3.zoom<SVGSVGElement, unknown>()
-        .scaleExtent([0.3, 3])
-        .on('zoom', (event) => g.attr('transform', event.transform))
-    )
+    const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.3, 3])
+      .on('zoom', (event) => g.attr('transform', event.transform))
+    svg.call(zoomBehavior)
 
-    // Simulation — run to alpha 0 then stop completely
-    const sim = d3.forceSimulation<KGNode>(nodes)
-      .force('link', d3.forceLink<KGNode, KGLink>(links).id((d) => d.id).distance((l) => {
-        const s = l.source as KGNode
-        return s.kind === 'office' ? 160 : 80
-      }).strength(0.9))
-      .force('charge', d3.forceManyBody().strength(-260))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius((d) => nodeRadius(d as KGNode) + 18))
-      .alphaDecay(0.04)
-      .velocityDecay(0.45)
+    // ── Deterministic radial layout ───────────────────────────────────────────
+    const cx = width / 2, cy = height / 2
+    const ROOMS: string[] = ['drawing_room', 'work_room_1', 'work_room_2']
+    const roomAngles = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]  // top, bottom-right, bottom-left
+    const roomR = Math.min(width, height) * 0.22   // room orbit radius
+    const devR  = Math.min(width, height) * 0.11   // device orbit around room
 
+    for (const n of nodes) {
+      if (n.kind === 'office') {
+        n.x = cx; n.y = cy
+      } else if (n.kind === 'room') {
+        const ri = ROOMS.indexOf(n.id)
+        const angle = roomAngles[ri] ?? 0
+        n.x = cx + roomR * Math.cos(angle)
+        n.y = cy + roomR * Math.sin(angle)
+      } else {
+        // Device: orbit around its parent room
+        const ri = ROOMS.indexOf(n.room ?? '')
+        const roomAngle = roomAngles[ri] ?? 0
+        const roomX = cx + roomR * Math.cos(roomAngle)
+        const roomY = cy + roomR * Math.sin(roomAngle)
+        // Find sibling device index for this room
+        const siblings = nodes.filter((x) => x.kind !== 'office' && x.kind !== 'room' && x.room === n.room)
+        const di = siblings.indexOf(n)
+        const spread = (2 * Math.PI) / Math.max(siblings.length, 1)
+        const devAngle = roomAngle + (di - (siblings.length - 1) / 2) * spread * 0.55
+        n.x = roomX + devR * Math.cos(devAngle)
+        n.y = roomY + devR * Math.sin(devAngle)
+      }
+      n.fx = n.x; n.fy = n.y
+    }
+
+    // Minimal sim (for drag reheat only)
+    const sim = d3.forceSimulation<KGNode>(nodes).stop()
     simRef.current = sim
 
     // Edges
@@ -234,20 +260,26 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .data(nodes).join('g')
       .attr('cursor', 'pointer')
       .on('click', (_evt, d) => onNodeClick(d))
-      .call(
-        d3.drag<SVGGElement, KGNode>()
-          .on('start', (_evt, d) => {
-            // Briefly reheat only for this drag
-            sim.alphaTarget(0.15).restart()
-            d.fx = d.x; d.fy = d.y
-          })
-          .on('drag', (evt, d) => { d.fx = evt.x; d.fy = evt.y })
-          .on('end', (_evt, d) => {
-            // Stop reheating immediately; pin node in place
-            sim.alphaTarget(0)
-            d.fx = d.x; d.fy = d.y
-          })
-      )
+
+    // Render helper — apply all current node/edge positions to DOM
+    const applyPositions = () => {
+      link
+        .attr('x1', (l) => (l.source as KGNode).x!)
+        .attr('y1', (l) => (l.source as KGNode).y!)
+        .attr('x2', (l) => (l.target as KGNode).x!)
+        .attr('y2', (l) => (l.target as KGNode).y!)
+      edgeLabel
+        .attr('x', (l) => ((l.source as KGNode).x! + (l.target as KGNode).x!) / 2)
+        .attr('y', (l) => ((l.source as KGNode).y! + (l.target as KGNode).y!) / 2)
+      node.attr('transform', (d) => `translate(${d.x},${d.y})`)
+    }
+
+    node.call(
+      d3.drag<SVGGElement, KGNode>()
+        .on('start', (_evt, d) => { d.fx = d.x; d.fy = d.y })
+        .on('drag', (evt, d) => { d.x = d.fx = evt.x; d.y = d.fy = evt.y; applyPositions() })
+        .on('end', (_evt, d) => { d.fx = d.x; d.fy = d.y })
+    )
 
     // Circle
     node.append('circle')
@@ -277,60 +309,40 @@ function D3Graph({ devices, onNodeClick }: GraphProps) {
       .attr('fill-opacity', (d) => !d.status && d.kind === 'light' || !d.status && d.kind === 'fan' ? 0.45 : 1)
       .text((d) => d.label)
 
-    // Tick
-    sim.on('tick', () => {
-      link
-        .attr('x1', (l) => (l.source as KGNode).x!)
-        .attr('y1', (l) => (l.source as KGNode).y!)
-        .attr('x2', (l) => (l.target as KGNode).x!)
-        .attr('y2', (l) => (l.target as KGNode).y!)
-
-      edgeLabel
-        .attr('x', (l) => ((l.source as KGNode).x! + (l.target as KGNode).x!) / 2)
-        .attr('y', (l) => ((l.source as KGNode).y! + (l.target as KGNode).y!) / 2)
-
-      node.attr('transform', (d) => `translate(${d.x},${d.y})`)
-    })
-
-    // Stop simulation once settled (alpha < threshold)
-    sim.on('end', () => {
-      // Pin all nodes once settled to prevent any future drift
-      for (const n of nodes) {
-        n.fx = n.x
-        n.fy = n.y
-      }
-    })
-  }, [devices, onNodeClick])
+    // Render positions
+    applyPositions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onNodeClick])
 
   useEffect(() => {
     const container = svgRef.current?.parentElement
     if (!container) return
 
-    // Use ResizeObserver to wait for a painted size
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      const { width, height } = entry.contentRect
-      if (width < 10 || height < 10) return
-      if (initedRef.current) {
-        // Re-init if size changes significantly (tab switch)
-        observer.disconnect()
-        initedRef.current = false
-      }
-      if (!initedRef.current) {
+    const tryInit = () => {
+      if (initedRef.current) return
+      const { offsetWidth: width, offsetHeight: height } = container
+      if (width > 10 && height > 10) {
         initedRef.current = true
-        // On tab switch the container may briefly report old size; schedule microtask
-        requestAnimationFrame(() => initGraph(width, height))
+        initGraph(width, height)
       }
-    })
+    }
+
+    // Use ResizeObserver to wait for the container to have a painted size
+    const observer = new ResizeObserver(tryInit)
     observer.observe(container)
+
+    // Also try immediately via rAF in case already painted
+    requestAnimationFrame(tryInit)
 
     return () => {
       observer.disconnect()
       simRef.current?.stop()
       initedRef.current = false
     }
-  }, [initGraph])
+    // Intentionally only run on mount/unmount — devices changes are handled
+    // by re-calling initGraph with the same dimensions when initedRef resets
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <svg
@@ -351,7 +363,7 @@ export function KnowledgeGraphTab({ devices }: { devices: Device[] }) {
       <HeroCard devices={devices} />
       <Legend />
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ height: 520 }}>
+      <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ height: 440 }}>
         <D3Graph devices={devices} onNodeClick={(n) => setSelectedNode(n)} />
       </div>
 
