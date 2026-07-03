@@ -4,69 +4,57 @@ import type { Device, RoomId } from '@/types'
 import { ROOM_LIST, ROOM_LABELS, ROOM_DESCRIPTIONS } from '@/lib/config'
 import { DeviceCard } from './device-card'
 
-interface DeviceStatusPanelProps {
+interface Props {
   devices: Device[]
 }
 
-function RoomSection({ room, devices }: { room: RoomId; devices: Device[] }) {
+function RoomCard({ room, devices }: { room: RoomId; devices: Device[] }) {
   const roomDevices = devices.filter((d) => d.room === room)
   const fans = roomDevices.filter((d) => d.device_type === 'fan')
   const lights = roomDevices.filter((d) => d.device_type === 'light')
   const onCount = roomDevices.filter((d) => d.status).length
-  const totalWatts = roomDevices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
+  const watts = roomDevices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
 
   return (
-    <div
-      className="rounded-2xl p-4 flex flex-col gap-3"
-      style={{ background: '#151A23', border: '1px solid #252B37' }}
-    >
+    <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-4">
       {/* Room header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-bold" style={{ color: '#EAEDF2' }}>
-            {ROOM_LABELS[room]}
-          </h3>
-          <p className="text-[11px] mt-0.5" style={{ color: '#8A93A3' }}>
-            {ROOM_DESCRIPTIONS[room]}
-          </p>
+          <h3 className="text-sm font-semibold text-foreground">{ROOM_LABELS[room]}</h3>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{ROOM_DESCRIPTIONS[room]}</p>
         </div>
-        <div className="text-right flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1">
           <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{
-              background: onCount > 0 ? 'rgba(34,211,166,0.1)' : 'rgba(255,255,255,0.04)',
-              color: onCount > 0 ? '#22D3A6' : '#8A93A3',
-              border: `1px solid ${onCount > 0 ? 'rgba(34,211,166,0.25)' : '#252B37'}`,
-            }}
+            className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${
+              onCount > 0 ? 'bg-on/10 text-on' : 'bg-surface text-muted-foreground'
+            }`}
           >
-            {onCount}/{roomDevices.length} ON
+            {onCount}/{roomDevices.length} on
           </span>
-          {totalWatts > 0 && (
-            <span className="text-[11px] font-mono font-bold" style={{ color: '#F5A623' }}>
-              {totalWatts}W
-            </span>
+          {watts > 0 && (
+            <span className="text-[11px] font-mono text-muted-foreground">{watts}W</span>
           )}
         </div>
       </div>
 
-      {/* Fans row */}
+      {/* Fans */}
       <div>
-        <p className="text-[10px] uppercase tracking-widest font-semibold mb-2" style={{ color: '#4B5563' }}>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
           Fans
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1.5">
           {fans.map((d) => (
             <DeviceCard key={d.id} device={d} />
           ))}
         </div>
       </div>
 
-      {/* Lights row */}
+      {/* Lights */}
       <div>
-        <p className="text-[10px] uppercase tracking-widest font-semibold mb-2" style={{ color: '#4B5563' }}>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
           Lights
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-1.5">
           {lights.map((d) => (
             <DeviceCard key={d.id} device={d} />
           ))}
@@ -76,34 +64,27 @@ function RoomSection({ room, devices }: { room: RoomId; devices: Device[] }) {
   )
 }
 
-export function DeviceStatusPanel({ devices }: DeviceStatusPanelProps) {
+export function DeviceStatusPanel({ devices }: Props) {
   const totalOn = devices.filter((d) => d.status).length
 
   return (
-    <section className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <section>
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-bold" style={{ color: '#EAEDF2' }}>
-            Device Status
-          </h2>
-          <p className="text-xs mt-0.5" style={{ color: '#8A93A3' }}>
-            {totalOn} of 15 devices currently on
+          <h2 className="text-sm font-semibold text-foreground">Device Status</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {totalOn} of {devices.length} devices currently on
           </p>
         </div>
-        {/* Live indicator */}
         <div className="flex items-center gap-1.5">
-          <div className="h-2 w-2 rounded-full glow-on" style={{ background: '#22D3A6' }} />
-          <span className="text-[11px] font-semibold" style={{ color: '#22D3A6' }}>
-            LIVE
-          </span>
+          <span className="h-1.5 w-1.5 rounded-full bg-on live-dot" />
+          <span className="text-[11px] font-medium text-on">Live</span>
         </div>
       </div>
 
-      {/* Room sections */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {ROOM_LIST.map((room) => (
-          <RoomSection key={room} room={room} devices={devices} />
+          <RoomCard key={room} room={room} devices={devices} />
         ))}
       </div>
     </section>

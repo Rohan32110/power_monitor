@@ -1,10 +1,10 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -19,88 +19,117 @@
   --color-destructive: var(--destructive);
   --color-ring: var(--ring);
   --color-input: var(--input);
-  --color-pulse-on: var(--pulse-on);
-  --color-pulse-warning: var(--pulse-warning);
-  --color-pulse-danger: var(--pulse-danger);
   --color-surface: var(--surface);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-on: var(--on);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  /* Aliases for Tailwind utility classes */
+  --color-on-foreground: #FFFFFF;
+  --color-warning-foreground: #FFFFFF;
+  --color-danger-foreground: #FFFFFF;
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-xl: calc(var(--radius) * 1.5);
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+/* ── Light theme (default) ───────────────────────────────────── */
 :root {
-  color-scheme: dark;
-  --background: #0B0E14;
-  --foreground: #EAEDF2;
-  --card: #151A23;
-  --card-foreground: #EAEDF2;
-  --surface: #1C2230;
-  --border: #252B37;
-  --muted: #1C2230;
-  --muted-foreground: #8A93A3;
-  --primary: #22D3A6;
-  --primary-foreground: #0B0E14;
-  --accent: #3B82F6;
-  --accent-foreground: #ffffff;
-  --destructive: #F0526B;
-  --ring: #22D3A6;
-  --input: #252B37;
-  --pulse-on: #22D3A6;
-  --pulse-warning: #F5A623;
-  --pulse-danger: #F0526B;
-  --radius: 0.75rem;
+  color-scheme: light;
+  --background: #FAFAFA;
+  --foreground: #09090B;
+  --card: #FFFFFF;
+  --card-foreground: #09090B;
+  --surface: #F4F4F5;
+  --border: #E4E4E7;
+  --muted: #F4F4F5;
+  --muted-foreground: #71717A;
+  --primary: #4F46E5;
+  --primary-foreground: #FFFFFF;
+  --accent: #4F46E5;
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --ring: #4F46E5;
+  --input: #E4E4E7;
+  --on: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --radius: 0.5rem;
 }
 
+/* ── Dark theme ──────────────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+  --background: #09090B;
+  --foreground: #FAFAFA;
+  --card: #18181B;
+  --card-foreground: #FAFAFA;
+  --surface: #27272A;
+  --border: #27272A;
+  --muted: #27272A;
+  --muted-foreground: #A1A1AA;
+  --primary: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --accent: #6366F1;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --ring: #6366F1;
+  --input: #27272A;
+  --on: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+}
+
+/* ── Base layer ──────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-tight;
   }
 }
 
-/* Fan spin animation */
+/* ── Fan spin animation ──────────────────────────────────────── */
 @keyframes fan-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
 .fan-spin {
-  animation: fan-spin 1.5s linear infinite;
+  animation: fan-spin 2s linear infinite;
   transform-origin: center;
 }
 
-/* Device ON glow */
-@keyframes glow-pulse {
+/* ── Live dot pulse ──────────────────────────────────────────── */
+@keyframes live-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
 }
 
-.glow-on {
-  animation: glow-pulse 2s ease-in-out infinite;
+/* ── Number transition ───────────────────────────────────────── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
-/* Number counter transition */
-.live-number {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: var(--card);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
+/* ── Scrollbar (minimal) ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }

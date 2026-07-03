@@ -4,252 +4,221 @@ import { useMemo } from 'react'
 import type { Device, RoomId } from '@/types'
 import { ROOM_LABELS } from '@/lib/config'
 
-interface OfficeLayoutViewProps {
+interface Props {
   devices: Device[]
 }
 
-interface RoomLayout {
-  id: RoomId
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-const ROOMS: RoomLayout[] = [
-  { id: 'drawing_room', x: 20, y: 20, w: 180, h: 230 },
-  { id: 'work_room_1', x: 220, y: 20, w: 200, h: 230 },
-  { id: 'work_room_2', x: 440, y: 20, w: 200, h: 230 },
+// Room rectangles in SVG viewBox 680 × 300
+const ROOMS: { id: RoomId; x: number; y: number; w: number; h: number }[] = [
+  { id: 'drawing_room', x: 16, y: 16, w: 190, h: 264 },
+  { id: 'work_room_1', x: 226, y: 16, w: 210, h: 264 },
+  { id: 'work_room_2', x: 456, y: 16, w: 210, h: 264 },
 ]
 
-function FanIcon({ x, y, isOn }: { x: number; y: number; isOn: boolean }) {
-  const color = isOn ? '#3B82F6' : '#374151'
+function FanIcon({ x, y, on }: { x: number; y: number; on: boolean }) {
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect x="-20" y="-20" width="40" height="40" rx="8" fill={isOn ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)'} stroke={isOn ? 'rgba(59,130,246,0.3)' : '#252B37'} strokeWidth="1" />
-      <g className={isOn ? 'fan-spin' : ''} style={{ transformOrigin: '0 0' }}>
-        <path d="M0,0 C0,-8 5,-12 8,-10 C11,-8 8,-2 0,0" fill={color} />
-        <path d="M0,0 C8,0 12,5 10,8 C8,11 2,8 0,0" fill={color} />
-        <path d="M0,0 C0,8 -5,12 -8,10 C-11,8 -8,2 0,0" fill={color} />
-        <path d="M0,0 C-8,0 -12,-5 -10,-8 C-8,-11 -2,-8 0,0" fill={color} />
-        <circle r="3" fill={color} />
+      <circle r="17" fill={on ? 'hsl(239 84% 67% / 0.12)' : 'hsl(240 5% 96% / 0.04)'} stroke={on ? 'hsl(239 84% 67% / 0.4)' : 'hsl(240 6% 83% / 0.3)'} strokeWidth="1" />
+      <g style={{ transformOrigin: '0 0' }} className={on ? 'fan-spin' : ''}>
+        <path d="M0-8 C2-10 7-11 8-8 C9-5 5-2 0 0" fill={on ? '#6366F1' : '#9CA3AF'} opacity={on ? 1 : 0.4} />
+        <path d="M8 0 C10-2 11-7 8-8 C5-9 2-5 0 0" fill={on ? '#6366F1' : '#9CA3AF'} opacity={on ? 1 : 0.4} />
+        <path d="M0 8 C-2 10-7 11-8 8 C-9 5-5 2 0 0" fill={on ? '#6366F1' : '#9CA3AF'} opacity={on ? 1 : 0.4} />
+        <path d="M-8 0 C-10 2-11 7-8 8 C-5 9-2 5 0 0" fill={on ? '#6366F1' : '#9CA3AF'} opacity={on ? 1 : 0.4} />
+        <circle r="2.5" fill={on ? '#6366F1' : '#9CA3AF'} opacity={on ? 1 : 0.4} />
       </g>
-      {isOn && <circle r="20" fill="none" stroke="#3B82F6" strokeWidth="0.5" opacity="0.4" className="glow-on" />}
     </g>
   )
 }
 
-function LightIcon({ x, y, isOn }: { x: number; y: number; isOn: boolean }) {
-  const color = isOn ? '#F5A623' : '#374151'
+function LightIcon({ x, y, on }: { x: number; y: number; on: boolean }) {
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect x="-16" y="-16" width="32" height="32" rx="8" fill={isOn ? 'rgba(245,166,35,0.12)' : 'rgba(255,255,255,0.03)'} stroke={isOn ? 'rgba(245,166,35,0.35)' : '#252B37'} strokeWidth="1" />
-      {isOn && (
-        <circle r="18" fill="#F5A623" opacity="0.07" className="glow-on" />
-      )}
-      <svg x="-8" y="-9" width="16" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
-        <path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 6H9c-1.5-1.5-3-3.5-3-6a6 6 0 0 1 6-6Z" />
-      </svg>
+      {on && <circle r="20" fill="#F59E0B" opacity="0.08" />}
+      <circle r="13" fill={on ? 'hsl(43 96% 56% / 0.18)' : 'hsl(240 5% 96% / 0.04)'} stroke={on ? 'hsl(43 96% 56% / 0.4)' : 'hsl(240 6% 83% / 0.3)'} strokeWidth="1" />
+      <path
+        d="M0-6a4 4 0 0 1 4 4c0 1.7-1 3-2 4H-2c-1-1-2-2.3-2-4a4 4 0 0 1 4-4Z M-1.5 5h3"
+        fill="none"
+        stroke={on ? '#F59E0B' : '#9CA3AF'}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        opacity={on ? 1 : 0.4}
+      />
     </g>
   )
 }
 
-function Table({ x, y }: { x: number; y: number }) {
-  return (
-    <rect x={x} y={y} width="50" height="30" rx="4" fill="rgba(255,255,255,0.04)" stroke="#252B37" strokeWidth="1" />
-  )
+function Desk({ x, y, w = 52, h = 28 }: { x: number; y: number; w?: number; h?: number }) {
+  return <rect x={x} y={y} width={w} height={h} rx="3" fill="hsl(240 5% 96% / 0.05)" stroke="hsl(240 6% 83% / 0.15)" strokeWidth="0.8" />
 }
 
-function Chair({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) {
-  return (
-    <rect
-      x={x - 7}
-      y={y - 7}
-      width="14"
-      height="14"
-      rx="3"
-      fill="rgba(255,255,255,0.06)"
-      stroke="#374151"
-      strokeWidth="0.5"
-      transform={`rotate(${rotate},${x},${y})`}
-    />
-  )
+function Chair({ x, y }: { x: number; y: number }) {
+  return <rect x={x - 7} y={y - 7} width="14" height="14" rx="3" fill="hsl(240 5% 96% / 0.07)" stroke="hsl(240 6% 83% / 0.15)" strokeWidth="0.8" />
 }
 
-export function OfficeLayoutView({ devices }: OfficeLayoutViewProps) {
-  const deviceMap = useMemo(() => {
-    const map: Record<string, boolean> = {}
-    for (const d of devices) {
-      map[d.id] = d.status
-    }
-    return map
+export function OfficeLayoutView({ devices }: Props) {
+  const map = useMemo(() => {
+    const m: Record<string, boolean> = {}
+    for (const d of devices) m[d.id] = d.status
+    return m
   }, [devices])
 
   const totalWatts = devices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
   const onCount = devices.filter((d) => d.status).length
 
   return (
-    <div
-      className="rounded-2xl p-4 flex flex-col gap-4"
-      style={{ background: '#151A23', border: '1px solid #252B37' }}
-    >
+    <div className="rounded-lg border border-border bg-card p-5 flex flex-col gap-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold" style={{ color: '#EAEDF2' }}>
-            Office Floor Plan
-          </h2>
-          <p className="text-xs mt-0.5" style={{ color: '#8A93A3' }}>
-            Top-view · Live device states
-          </p>
+          <h2 className="text-sm font-semibold text-foreground">Floor Plan</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Top-view · live device states</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-mono font-bold" style={{ color: '#F5A623' }}>{totalWatts}W</p>
-          <p className="text-[10px]" style={{ color: '#8A93A3' }}>{onCount}/15 ON</p>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-muted-foreground">{totalWatts}W</span>
+          <span className="text-[11px] font-medium text-on">{onCount}/15 on</span>
         </div>
       </div>
 
-      {/* SVG floor plan */}
-      <div className="w-full overflow-x-auto">
-        <svg
-          viewBox="0 0 660 270"
-          className="w-full"
-          style={{ minWidth: 480, maxHeight: 280 }}
-        >
-          {/* Background grid */}
+      {/* SVG */}
+      <div className="w-full overflow-x-auto rounded-md bg-surface p-2">
+        <svg viewBox="0 0 680 300" className="w-full" style={{ minWidth: 440 }}>
+          {/* Grid */}
           <defs>
-            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1C2230" strokeWidth="0.5" />
+            <pattern id="floor-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M20 0L0 0 0 20" fill="none" stroke="hsl(240 6% 83% / 0.06)" strokeWidth="0.5" />
+            </pattern>
+            <pattern id="floor-grid-dark" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M20 0L0 0 0 20" fill="none" stroke="hsl(240 6% 83% / 0.04)" strokeWidth="0.5" />
             </pattern>
           </defs>
-          <rect width="660" height="270" fill="url(#grid)" />
+          <rect width="680" height="300" fill="url(#floor-grid)" />
+
+          {/* Entry corridor at bottom */}
+          <rect x="16" y="290" width="650" height="8" rx="2" fill="hsl(240 6% 83% / 0.05)" stroke="hsl(240 6% 83% / 0.1)" strokeWidth="0.5" />
+          <text x="340" y="298" textAnchor="middle" fill="hsl(240 6% 83% / 0.3)" fontSize="7" fontFamily="system-ui">ENTRY</text>
 
           {/* Rooms */}
           {ROOMS.map((room) => {
-            const roomDevices = devices.filter((d) => d.room === room.id)
-            const onCount = roomDevices.filter((d) => d.status).length
-            const watts = roomDevices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
-
+            const rd = devices.filter((d) => d.room === room.id)
+            const rOn = rd.filter((d) => d.status).length
+            const rW = rd.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
             return (
               <g key={room.id}>
-                {/* Room outline */}
                 <rect
-                  x={room.x}
-                  y={room.y}
-                  width={room.w}
-                  height={room.h}
-                  rx="10"
-                  fill="rgba(21,26,35,0.8)"
-                  stroke={onCount > 0 ? 'rgba(34,211,166,0.2)' : '#252B37'}
-                  strokeWidth="1.5"
+                  x={room.x} y={room.y} width={room.w} height={room.h} rx="6"
+                  fill="hsl(240 5% 96% / 0.02)"
+                  stroke={rOn > 0 ? 'hsl(239 84% 67% / 0.25)' : 'hsl(240 6% 83% / 0.15)'}
+                  strokeWidth="1"
                 />
-
-                {/* Room label */}
-                <text
-                  x={room.x + room.w / 2}
-                  y={room.y + 18}
-                  textAnchor="middle"
-                  fill="#EAEDF2"
-                  fontSize="11"
-                  fontWeight="700"
-                  fontFamily="system-ui"
-                >
+                {/* Room name */}
+                <text x={room.x + room.w / 2} y={room.y + 15} textAnchor="middle" fill="hsl(240 6% 83% / 0.7)" fontSize="9.5" fontWeight="600" fontFamily="system-ui">
                   {ROOM_LABELS[room.id]}
                 </text>
-
-                {/* Wattage */}
-                {watts > 0 && (
-                  <text
-                    x={room.x + room.w - 8}
-                    y={room.y + room.h - 8}
-                    textAnchor="end"
-                    fill="#F5A623"
-                    fontSize="10"
-                    fontWeight="600"
-                    fontFamily="monospace"
-                  >
-                    {watts}W
+                {/* Wattage badge */}
+                {rW > 0 && (
+                  <text x={room.x + room.w - 8} y={room.y + room.h - 8} textAnchor="end" fill="#F59E0B" fontSize="8.5" fontWeight="600" fontFamily="monospace">
+                    {rW}W
                   </text>
                 )}
+                {/* Windows along top wall */}
+                <rect x={room.x + 25} y={room.y} width="20" height="3" rx="1" fill="hsl(240 6% 83% / 0.2)" />
+                <rect x={room.x + room.w - 45} y={room.y} width="20" height="3" rx="1" fill="hsl(240 6% 83% / 0.2)" />
+                {/* Door at bottom */}
+                <path d={`M${room.x + room.w / 2 - 10} ${room.y + room.h} Q${room.x + room.w / 2 - 10} ${room.y + room.h - 14} ${room.x + room.w / 2 + 10} ${room.y + room.h - 14}`} fill="none" stroke="hsl(240 6% 83% / 0.2)" strokeWidth="0.8" />
               </g>
             )
           })}
 
-          {/* Drawing Room devices: fans at top, lights at bottom, table + chairs in middle */}
-          <FanIcon x={75} y={65} isOn={deviceMap['drawing_room-fan-1']} />
-          <FanIcon x={140} y={65} isOn={deviceMap['drawing_room-fan-2']} />
-          {/* Waiting area chairs */}
-          <Chair x={55} y={130} />
-          <Chair x={80} y={130} />
-          <Chair x={55} y={155} />
-          <Chair x={80} y={155} />
-          <Chair x={130} y={130} />
-          <Chair x={155} y={130} />
-          <Chair x={130} y={155} />
-          <Chair x={155} y={155} />
-          <LightIcon x={70} y={195} isOn={deviceMap['drawing_room-light-1']} />
-          <LightIcon x={107} y={195} isOn={deviceMap['drawing_room-light-2']} />
-          <LightIcon x={144} y={195} isOn={deviceMap['drawing_room-light-3']} />
+          {/* ── Drawing Room furniture + devices ── */}
+          {/* Sofa area */}
+          <Desk x={36} y={82} w={70} h={36} />
+          <Chair x={50} y={76} />
+          <Chair x={80} y={76} />
+          <Chair x={110} y={76} />
+          {/* Small table */}
+          <Desk x={64} y={130} w={40} h={24} />
+          <Chair x={58} y={166} />
+          <Chair x={90} y={166} />
+          {/* Plant corners */}
+          <circle cx="30" cy="36" r="5" fill="hsl(142 71% 45% / 0.2)" stroke="hsl(142 71% 45% / 0.3)" strokeWidth="0.8" />
+          <circle cx="196" cy="36" r="5" fill="hsl(142 71% 45% / 0.2)" stroke="hsl(142 71% 45% / 0.3)" strokeWidth="0.8" />
+          {/* Fans */}
+          <FanIcon x={80} y={54} on={map['drawing_room-fan-1']} />
+          <FanIcon x={150} y={54} on={map['drawing_room-fan-2']} />
+          {/* Lights */}
+          <LightIcon x={55} y={210} on={map['drawing_room-light-1']} />
+          <LightIcon x={107} y={210} on={map['drawing_room-light-2']} />
+          <LightIcon x={159} y={210} on={map['drawing_room-light-3']} />
 
-          {/* Work Room 1 devices */}
-          <FanIcon x={285} y={65} isOn={deviceMap['work_room_1-fan-1']} />
-          <FanIcon x={355} y={65} isOn={deviceMap['work_room_1-fan-2']} />
-          {/* Work desks */}
-          <Table x={240} y={100} />
-          <Chair x={265} y={95} rotate={0} />
-          <Table x={310} y={100} />
-          <Chair x={335} y={95} rotate={0} />
-          <Table x={380} y={100} />
-          <Chair x={405} y={95} rotate={0} />
-          <Table x={240} y={150} />
-          <Chair x={265} y={145} rotate={0} />
-          <Table x={310} y={150} />
-          <Chair x={335} y={145} rotate={0} />
-          <LightIcon x={275} y={200} isOn={deviceMap['work_room_1-light-1']} />
-          <LightIcon x={320} y={200} isOn={deviceMap['work_room_1-light-2']} />
-          <LightIcon x={365} y={200} isOn={deviceMap['work_room_1-light-3']} />
+          {/* ── Work Room 1 furniture + devices ── */}
+          <Desk x={244} y={80} />
+          <Chair x={270} y={74} />
+          <Chair x={270} y={114} />
+          <Desk x={310} y={80} />
+          <Chair x={336} y={74} />
+          <Chair x={336} y={114} />
+          <Desk x={376} y={80} />
+          <Chair x={402} y={74} />
+          <Chair x={402} y={114} />
+          <Desk x={244} y={148} />
+          <Chair x={270} y={142} />
+          <Chair x={270} y={182} />
+          <Desk x={310} y={148} />
+          <Chair x={336} y={142} />
+          <Chair x={336} y={182} />
+          {/* Fans */}
+          <FanIcon x={290} y={54} on={map['work_room_1-fan-1']} />
+          <FanIcon x={376} y={54} on={map['work_room_1-fan-2']} />
+          {/* Lights */}
+          <LightIcon x={267} y={216} on={map['work_room_1-light-1']} />
+          <LightIcon x={328} y={216} on={map['work_room_1-light-2']} />
+          <LightIcon x={390} y={216} on={map['work_room_1-light-3']} />
 
-          {/* Work Room 2 devices */}
-          <FanIcon x={503} y={65} isOn={deviceMap['work_room_2-fan-1']} />
-          <FanIcon x={573} y={65} isOn={deviceMap['work_room_2-fan-2']} />
-          {/* Work desks */}
-          <Table x={455} y={100} />
-          <Chair x={480} y={95} rotate={0} />
-          <Table x={525} y={100} />
-          <Chair x={550} y={95} rotate={0} />
-          <Table x={595} y={100} />
-          <Chair x={620} y={95} rotate={0} />
-          <Table x={455} y={150} />
-          <Chair x={480} y={145} rotate={0} />
-          <Table x={525} y={150} />
-          <Chair x={550} y={145} rotate={0} />
-          <LightIcon x={490} y={200} isOn={deviceMap['work_room_2-light-1']} />
-          <LightIcon x={537} y={200} isOn={deviceMap['work_room_2-light-2']} />
-          <LightIcon x={584} y={200} isOn={deviceMap['work_room_2-light-3']} />
+          {/* ── Work Room 2 furniture + devices ── */}
+          <Desk x={474} y={80} />
+          <Chair x={500} y={74} />
+          <Chair x={500} y={114} />
+          <Desk x={540} y={80} />
+          <Chair x={566} y={74} />
+          <Chair x={566} y={114} />
+          <Desk x={606} y={80} />
+          <Chair x={632} y={74} />
+          <Chair x={632} y={114} />
+          <Desk x={474} y={148} />
+          <Chair x={500} y={142} />
+          <Chair x={500} y={182} />
+          <Desk x={540} y={148} />
+          <Chair x={566} y={142} />
+          <Chair x={566} y={182} />
+          {/* Water cooler */}
+          <circle cx="648" cy="198" r="6" fill="hsl(210 100% 60% / 0.1)" stroke="hsl(210 100% 60% / 0.3)" strokeWidth="0.8" />
+          {/* Fans */}
+          <FanIcon x={518} y={54} on={map['work_room_2-fan-1']} />
+          <FanIcon x={606} y={54} on={map['work_room_2-fan-2']} />
+          {/* Lights */}
+          <LightIcon x={497} y={216} on={map['work_room_2-light-1']} />
+          <LightIcon x={559} y={216} on={map['work_room_2-light-2']} />
+          <LightIcon x={621} y={216} on={map['work_room_2-light-3']} />
 
-          {/* Corridor */}
-          <line x1="200" y1="20" x2="200" y2="250" stroke="#252B37" strokeWidth="1" strokeDasharray="4,4" />
-          <line x1="420" y1="20" x2="420" y2="250" stroke="#252B37" strokeWidth="1" strokeDasharray="4,4" />
+          {/* Divider walls */}
+          <line x1="216" y1="16" x2="216" y2="284" stroke="hsl(240 6% 83% / 0.2)" strokeWidth="1" />
+          <line x1="446" y1="16" x2="446" y2="284" stroke="hsl(240 6% 83% / 0.2)" strokeWidth="1" />
         </svg>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-5 flex-wrap" style={{ borderTop: '1px solid #252B37', paddingTop: 12 }}>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgba(59,130,246,0.3)', border: '1px solid #3B82F6' }} />
-          <span className="text-[10px]" style={{ color: '#8A93A3' }}>Fan ON</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgba(245,166,35,0.3)', border: '1px solid #F5A623' }} />
-          <span className="text-[10px]" style={{ color: '#8A93A3' }}>Light ON</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #252B37' }} />
-          <span className="text-[10px]" style={{ color: '#8A93A3' }}>Device OFF</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid #374151' }} />
-          <span className="text-[10px]" style={{ color: '#8A93A3' }}>Desk / Chair</span>
-        </div>
+      <div className="flex items-center gap-5 flex-wrap border-t border-border pt-4">
+        {[
+          { color: 'bg-primary', label: 'Fan ON' },
+          { color: 'bg-warning', label: 'Light ON' },
+          { color: 'bg-muted-foreground/30', label: 'Device OFF' },
+          { color: 'bg-on/30', label: 'Plant' },
+        ].map((item) => (
+          <div key={item.label} className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${item.color}`} />
+            <span className="text-[11px] text-muted-foreground">{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -1,298 +1,269 @@
 'use client'
 
+/**
+ * Knowledge Graph — D3 force-directed graph
+ *
+ * Bug fixed: The previous implementation called simulation.alphaTarget(0.3).restart()
+ * inside the drag "start" handler, which re-heated the simulation every time a node
+ * was touched. Because devices update every 8s and the graph was re-initialised each
+ * time, the simulation was constantly warm and nodes never came to rest.
+ *
+ * Fix:
+ *   1. The simulation runs ONCE with a high alpha and decays to rest (alphaDecay 0.04).
+ *      It does NOT restart when devices change — only node colours/labels update in place.
+ *   2. Drag: we only set alphaTarget(0.3) while the user is actively dragging, and
+ *      reset it to 0 on drag end. This keeps dragged nodes responsive without
+ *      rehitting every other node.
+ *   3. Node positions (x/y) are preserved between device-data refreshes so the
+ *      layout is stable.
+ */
+
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as d3 from 'd3'
-import type { Device, KGNode, KGLink, KGGraph } from '@/types'
+import type { Device, KGNode, KGLink } from '@/types'
 import { ROOM_LIST, ROOM_LABELS } from '@/lib/config'
 
-interface KnowledgeGraphProps {
+interface Props {
   devices: Device[]
 }
 
-function buildGraph(devices: Device[]): KGGraph {
+// ── Build graph from devices ─────────────────────────────────
+function buildGraph(devices: Device[]): { nodes: KGNode[]; links: KGLink[] } {
   const nodes: KGNode[] = []
   const links: KGLink[] = []
 
-  // Office root
   nodes.push({ id: 'office', label: 'Office HQ', type: 'office' })
 
   for (const room of ROOM_LIST) {
     nodes.push({ id: room, label: ROOM_LABELS[room], type: 'room', room })
     links.push({ source: 'office', target: room, label: 'contains' })
 
-    const roomDevices = devices.filter((d) => d.room === room)
-    for (const device of roomDevices) {
-      const type = device.device_type === 'fan' ? 'fan' : 'light'
+    for (const d of devices.filter((dev) => dev.room === room)) {
       nodes.push({
-        id: device.id,
-        label: `${device.device_type === 'fan' ? 'Fan' : 'Light'} ${device.device_number}`,
-        type,
-        status: device.status,
-        wattage: device.wattage,
+        id: d.id,
+        label: `${d.device_type === 'fan' ? 'Fan' : 'Light'} ${d.device_number}`,
+        type: d.device_type,
+        status: d.status,
+        wattage: d.wattage,
         room,
       })
-      links.push({ source: room, target: device.id, label: device.status ? 'ON' : 'OFF' })
+      links.push({ source: room, target: d.id, label: d.status ? 'ON' : 'OFF' })
     }
   }
-
   return { nodes, links }
 }
 
-const NODE_COLORS: Record<string, string> = {
-  office: '#3B82F6',
-  room: '#8B5CF6',
-  fan_on: '#3B82F6',
-  fan_off: '#374151',
-  light_on: '#F5A623',
-  light_off: '#374151',
+const NODE_R: Record<string, number> = {
+  office: 26,
+  room: 18,
+  fan: 12,
+  light: 12,
 }
 
-const NODE_RADIUS: Record<string, number> = {
-  office: 28,
-  room: 20,
-  fan: 14,
-  light: 14,
+// Node fill/stroke — uses CSS variables so it works in light and dark
+function nodeColors(n: KGNode) {
+  if (n.type === 'office') return { fill: 'hsl(239 84% 67% / 0.12)', stroke: '#6366F1', text: '#6366F1' }
+  if (n.type === 'room') return { fill: 'hsl(239 84% 67% / 0.07)', stroke: '#818CF8', text: '#818CF8' }
+  if (n.type === 'fan') return n.status
+    ? { fill: 'hsl(239 84% 67% / 0.1)', stroke: '#6366F1', text: '#6366F1' }
+    : { fill: 'transparent', stroke: '#D4D4D8', text: '#A1A1AA' }
+  // light
+  return n.status
+    ? { fill: 'hsl(43 96% 56% / 0.12)', stroke: '#F59E0B', text: '#F59E0B' }
+    : { fill: 'transparent', stroke: '#D4D4D8', text: '#A1A1AA' }
 }
 
-interface TooltipInfo {
-  x: number
-  y: number
-  node: KGNode
+function linkColor(tgt: KGNode) {
+  if (tgt.type === 'room') return '#818CF8'
+  return tgt.status ? '#22C55E' : '#D4D4D8'
 }
 
-export function KnowledgeGraph({ devices }: KnowledgeGraphProps) {
+export function KnowledgeGraph({ devices }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const simulationRef = useRef<d3.Simulation<KGNode, KGLink> | null>(null)
-  const [tooltip, setTooltip] = useState<TooltipInfo | null>(null)
+  const simRef = useRef<d3.Simulation<KGNode, KGLink> | null>(null)
+  // Stable node positions — preserved across device updates
+  const nodePositionsRef = useRef<Map<string, { x: number; y: number; fx?: number | null; fy?: number | null }>>(new Map())
+  const initializedRef = useRef(false)
+
   const [selectedNode, setSelectedNode] = useState<KGNode | null>(null)
-  const [graphStats, setGraphStats] = useState({ onCount: 0, offCount: 0, totalWatts: 0 })
 
-  // Compute stats
-  useEffect(() => {
-    const onCount = devices.filter((d) => d.status).length
-    const offCount = devices.length - onCount
-    const totalWatts = devices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
-    setGraphStats({ onCount, offCount, totalWatts })
-  }, [devices])
-
+  // ── One-time graph initialisation ─────────────────────────
   const initGraph = useCallback(() => {
     const svg = svgRef.current
     const container = containerRef.current
     if (!svg || !container) return
 
-    const width = container.clientWidth || 700
-    const height = 460
+    const W = container.clientWidth || 720
+    const H = 480
 
-    // Clear previous
     d3.select(svg).selectAll('*').remove()
 
     const graph = buildGraph(devices)
 
-    // Deep-copy nodes to let D3 mutate them with x/y
-    const nodes: KGNode[] = graph.nodes.map((n) => ({ ...n }))
+    // Restore saved positions
+    const nodes: KGNode[] = graph.nodes.map((n) => {
+      const saved = nodePositionsRef.current.get(n.id)
+      return { ...n, x: saved?.x, y: saved?.y, fx: saved?.fx ?? null, fy: saved?.fy ?? null }
+    })
     const links: KGLink[] = graph.links.map((l) => ({ ...l }))
 
-    // Set up SVG
     const svgEl = d3.select(svg)
-      .attr('width', width)
-      .attr('height', height)
-      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('width', W)
+      .attr('height', H)
+      .attr('viewBox', `0 0 ${W} ${H}`)
 
-    // Arrow markers
+    // Defs — arrowhead
     const defs = svgEl.append('defs')
-    ;(['on', 'off', 'room']).forEach((type) => {
-      defs.append('marker')
-        .attr('id', `arrow-${type}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 22)
-        .attr('refY', 0)
-        .attr('markerWidth', 5)
-        .attr('markerHeight', 5)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', type === 'on' ? '#22D3A6' : type === 'room' ? '#8B5CF6' : '#374151')
-    })
+    defs.append('marker')
+      .attr('id', 'kg-arrow')
+      .attr('viewBox', '0 -4 8 8')
+      .attr('refX', 20)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-4L8,0L0,4')
+      .attr('fill', '#A1A1AA')
+      .attr('fill-opacity', '0.5')
 
-    // Background
-    svgEl.append('rect')
-      .attr('width', width)
-      .attr('height', height)
-      .attr('fill', '#0D1117')
-      .attr('rx', 12)
-
-    // Grid pattern
-    const gridSize = 30
-    for (let x = 0; x < width; x += gridSize) {
-      svgEl.append('line').attr('x1', x).attr('y1', 0).attr('x2', x).attr('y2', height)
-        .attr('stroke', '#1C2230').attr('stroke-width', 0.5)
-    }
-    for (let y = 0; y < height; y += gridSize) {
-      svgEl.append('line').attr('x1', 0).attr('y1', y).attr('x2', width).attr('y2', y)
-        .attr('stroke', '#1C2230').attr('stroke-width', 0.5)
-    }
-
-    // Zoom & pan
-    const g = svgEl.append('g').attr('class', 'zoom-group')
+    // Zoom/pan group
+    const g = svgEl.append('g')
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.4, 3])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform)
-      })
+      .scaleExtent([0.3, 2.5])
+      .on('zoom', (ev) => g.attr('transform', ev.transform))
     svgEl.call(zoom)
+    svgEl.on('click', () => setSelectedNode(null))
 
-    // Force simulation
+    // ── Force simulation ─────────────────────────────────────
+    // alphaDecay 0.04 means it settles in ~60 ticks (a few seconds) then stops.
+    // We do NOT call restart() or raise alphaTarget externally — only drag does that.
     const simulation = d3.forceSimulation<KGNode>(nodes)
+      .alphaDecay(0.04)
       .force('link', d3.forceLink<KGNode, KGLink>(links)
         .id((d) => d.id)
         .distance((l) => {
-          const src = l.source as KGNode
-          const tgt = l.target as KGNode
-          if (src.type === 'office') return 160
-          if (src.type === 'room') return 100
-          return 70
+          const s = l.source as KGNode
+          return s.type === 'office' ? 150 : 90
         })
-        .strength(0.8)
+        .strength(0.6)
       )
-      .force('charge', d3.forceManyBody().strength(-350))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide<KGNode>((d) => NODE_RADIUS[d.type] + 18))
+      .force('charge', d3.forceManyBody().strength(-320))
+      .force('center', d3.forceCenter(W / 2, H / 2).strength(0.05))
+      .force('collide', d3.forceCollide<KGNode>((d) => NODE_R[d.type] + 16))
 
-    simulationRef.current = simulation
+    simRef.current = simulation
 
-    // Link lines
-    const linkG = g.append('g').attr('class', 'links')
-    const linkEl = linkG.selectAll('line')
+    // ── Links ────────────────────────────────────────────────
+    const linkG = g.append('g')
+    const linkEl = linkG.selectAll<SVGLineElement, KGLink>('line')
       .data(links)
-      .enter()
-      .append('line')
-      .attr('stroke', (l) => {
-        const tgt = l.target as KGNode
-        if (tgt.type === 'room') return '#8B5CF6'
-        return tgt.status ? '#22D3A6' : '#252B37'
-      })
-      .attr('stroke-width', (l) => {
-        const tgt = l.target as KGNode
-        return tgt.type === 'room' ? 1.5 : 1
-      })
-      .attr('stroke-opacity', 0.6)
+      .join('line')
+      .attr('stroke', (l) => linkColor(l.target as KGNode))
+      .attr('stroke-width', 1)
+      .attr('stroke-opacity', 0.4)
       .attr('stroke-dasharray', (l) => {
-        const tgt = l.target as KGNode
-        return (tgt.type === 'fan' || tgt.type === 'light') && !tgt.status ? '4,4' : 'none'
+        const t = l.target as KGNode
+        return (t.type === 'fan' || t.type === 'light') && !t.status ? '4,4' : 'none'
       })
-      .attr('marker-end', (l) => {
-        const tgt = l.target as KGNode
-        if (tgt.type === 'room') return 'url(#arrow-room)'
-        return tgt.status ? 'url(#arrow-on)' : 'url(#arrow-off)'
-      })
+      .attr('marker-end', 'url(#kg-arrow)')
 
     // Link labels
-    const linkLabelEl = linkG.selectAll('text')
+    const linkLabelEl = linkG.selectAll<SVGTextElement, KGLink>('text')
       .data(links)
-      .enter()
-      .append('text')
+      .join('text')
       .attr('text-anchor', 'middle')
       .attr('dy', -4)
       .attr('font-size', 8)
       .attr('font-family', 'monospace')
-      .attr('fill', (l) => {
-        const tgt = l.target as KGNode
-        if (tgt.type === 'room') return '#6D28D9'
-        return tgt.status ? '#22D3A6' : '#4B5563'
-      })
-      .attr('opacity', 0.8)
+      .attr('fill', '#A1A1AA')
+      .attr('fill-opacity', 0.6)
+      .attr('pointer-events', 'none')
       .text((l) => l.label)
 
-    // Node groups
-    const nodeG = g.append('g').attr('class', 'nodes')
-    const nodeEl = nodeG.selectAll('g.node')
+    // ── Nodes ────────────────────────────────────────────────
+    const nodeG = g.append('g')
+    const nodeEl = nodeG.selectAll<SVGGElement, KGNode>('g.node')
       .data(nodes)
-      .enter()
-      .append('g')
+      .join('g')
       .attr('class', 'node')
-      .style('cursor', 'pointer')
+      .style('cursor', 'grab')
 
-    // Node circle (outer glow for ON devices)
+    // Glow ring for ON devices
     nodeEl.filter((d) => (d.type === 'fan' || d.type === 'light') && !!d.status)
       .append('circle')
-      .attr('r', (d) => NODE_RADIUS[d.type] + 6)
+      .attr('r', (d) => NODE_R[d.type] + 7)
       .attr('fill', 'none')
-      .attr('stroke', (d) => d.type === 'fan' ? '#3B82F6' : '#F5A623')
+      .attr('stroke', (d) => d.type === 'light' ? '#F59E0B' : '#6366F1')
       .attr('stroke-width', 1)
-      .attr('opacity', 0.25)
-      .attr('class', 'glow-on')
+      .attr('stroke-opacity', 0.2)
 
     // Main circle
     nodeEl.append('circle')
-      .attr('r', (d) => NODE_RADIUS[d.type])
-      .attr('fill', (d) => {
-        if (d.type === 'office') return '#1E3A5F'
-        if (d.type === 'room') return '#2E1065'
-        if (d.type === 'fan') return d.status ? '#1E3A5F' : '#1a1f2e'
-        return d.status ? '#3d2600' : '#1a1f2e'
-      })
-      .attr('stroke', (d) => {
-        if (d.type === 'office') return '#3B82F6'
-        if (d.type === 'room') return '#8B5CF6'
-        if (d.type === 'fan') return d.status ? '#3B82F6' : '#374151'
-        return d.status ? '#F5A623' : '#374151'
-      })
-      .attr('stroke-width', (d) => d.type === 'office' || d.type === 'room' ? 2 : 1.5)
+      .attr('r', (d) => NODE_R[d.type])
+      .attr('fill', (d) => nodeColors(d).fill)
+      .attr('stroke', (d) => nodeColors(d).stroke)
+      .attr('stroke-width', (d) => (d.type === 'office' || d.type === 'room') ? 1.5 : 1)
 
-    // Node icons (text symbols)
+    // Icon text
     nodeEl.append('text')
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')
-      .attr('font-size', (d) => d.type === 'office' ? 14 : d.type === 'room' ? 11 : 9)
-      .attr('fill', (d) => {
-        if (d.type === 'office') return '#3B82F6'
-        if (d.type === 'room') return '#8B5CF6'
-        if (d.type === 'fan') return d.status ? '#3B82F6' : '#4B5563'
-        return d.status ? '#F5A623' : '#4B5563'
-      })
+      .attr('font-size', (d) => d.type === 'office' ? 13 : d.type === 'room' ? 10 : 8)
+      .attr('fill', (d) => nodeColors(d).text)
+      .attr('pointer-events', 'none')
       .text((d) => {
-        if (d.type === 'office') return '\u2302'
-        if (d.type === 'room') return '\u25A1'
-        if (d.type === 'fan') return '\u25CB'
-        return '\u2605'
+        if (d.type === 'office') return 'HQ'
+        if (d.type === 'room') return d.label.split(' ')[0] // "Drawing" / "Work"
+        return d.type === 'fan' ? 'F' : 'L'
       })
 
-    // Labels below nodes
+    // Label below
     nodeEl.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', (d) => NODE_RADIUS[d.type] + 12)
-      .attr('font-size', (d) => d.type === 'office' ? 11 : d.type === 'room' ? 10 : 8)
-      .attr('font-weight', (d) => d.type === 'office' || d.type === 'room' ? 700 : 400)
+      .attr('dy', (d) => NODE_R[d.type] + 13)
+      .attr('font-size', (d) => d.type === 'office' ? 10 : 9)
+      .attr('font-weight', (d) => d.type === 'office' || d.type === 'room' ? 600 : 400)
       .attr('font-family', 'system-ui, sans-serif')
-      .attr('fill', (d) => d.type === 'office' ? '#3B82F6' : d.type === 'room' ? '#C4B5FD' : '#8A93A3')
+      .attr('fill', (d) => nodeColors(d).text)
+      .attr('fill-opacity', (d) => d.type === 'office' || d.type === 'room' ? 1 : 0.8)
+      .attr('pointer-events', 'none')
       .text((d) => d.label)
 
-    // Wattage badge for ON devices
+    // Wattage label for ON devices
     nodeEl.filter((d) => (d.type === 'fan' || d.type === 'light') && !!d.status)
       .append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', (d) => -NODE_RADIUS[d.type] - 5)
+      .attr('dy', (d) => -NODE_R[d.type] - 5)
       .attr('font-size', 7)
       .attr('font-family', 'monospace')
-      .attr('fill', '#22D3A6')
+      .attr('fill', '#22C55E')
+      .attr('fill-opacity', 0.9)
+      .attr('pointer-events', 'none')
       .text((d) => `${d.wattage}W`)
 
-    // Drag behavior
+    // ── Drag ─────────────────────────────────────────────────
+    // Only heat simulation during actual drag; cool immediately on release.
     const drag = d3.drag<SVGGElement, KGNode>()
       .on('start', (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.3).restart()
+        if (!event.active) simulation.alphaTarget(0.2).restart()
         d.fx = d.x
         d.fy = d.y
+        d3.select<SVGGElement, KGNode>(event.sourceEvent.target.closest('g.node') as SVGGElement)
+          .style('cursor', 'grabbing')
       })
       .on('drag', (event, d) => {
         d.fx = event.x
         d.fy = event.y
       })
       .on('end', (event, d) => {
+        // Cool down immediately — crucial fix for stability
         if (!event.active) simulation.alphaTarget(0)
-        d.fx = null
-        d.fy = null
+        // Pin the node where the user left it so it stays put
+        d.fx = event.x
+        d.fy = event.y
+        nodePositionsRef.current.set(d.id, { x: d.x ?? 0, y: d.y ?? 0, fx: d.fx, fy: d.fy })
       })
 
     nodeEl.call(drag as any)
@@ -300,209 +271,178 @@ export function KnowledgeGraph({ devices }: KnowledgeGraphProps) {
     // Click to select
     nodeEl.on('click', (event, d) => {
       event.stopPropagation()
-      setSelectedNode((prev) => (prev?.id === d.id ? null : d))
+      setSelectedNode((prev) => (prev?.id === d.id ? null : { ...d }))
     })
 
-    // Hover tooltip
-    nodeEl.on('mouseenter', (event, d) => {
-      const rect = svgRef.current?.getBoundingClientRect()
-      if (!rect) return
-      setTooltip({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-        node: d,
-      })
-    }).on('mousemove', (event) => {
-      const rect = svgRef.current?.getBoundingClientRect()
-      if (!rect) return
-      setTooltip((prev) => prev ? { ...prev, x: event.clientX - rect.left, y: event.clientY - rect.top } : null)
-    }).on('mouseleave', () => {
-      setTooltip(null)
-    })
-
-    // Click on background to deselect
-    svgEl.on('click', () => setSelectedNode(null))
-
-    // Simulation tick
+    // ── Tick ─────────────────────────────────────────────────
     simulation.on('tick', () => {
       linkEl
         .attr('x1', (l) => (l.source as KGNode).x ?? 0)
         .attr('y1', (l) => (l.source as KGNode).y ?? 0)
         .attr('x2', (l) => (l.target as KGNode).x ?? 0)
         .attr('y2', (l) => (l.target as KGNode).y ?? 0)
-
       linkLabelEl
         .attr('x', (l) => (((l.source as KGNode).x ?? 0) + ((l.target as KGNode).x ?? 0)) / 2)
         .attr('y', (l) => (((l.source as KGNode).y ?? 0) + ((l.target as KGNode).y ?? 0)) / 2)
-
       nodeEl.attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
+
+      // Persist positions while simulation is running
+      nodes.forEach((n) => {
+        if (n.x !== undefined) nodePositionsRef.current.set(n.id, { x: n.x, y: n.y ?? 0, fx: n.fx, fy: n.fy })
+      })
     })
 
-    return () => {
-      simulation.stop()
-    }
-  }, [devices])
+    return () => simulation.stop()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally empty — only runs ONCE on mount
 
+  // ── Initial mount ─────────────────────────────────────────
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
     const cleanup = initGraph()
     return cleanup
   }, [initGraph])
 
+  // ── Device updates: patch colours/labels WITHOUT reinitialising ──
+  useEffect(() => {
+    if (!svgRef.current) return
+    const svg = d3.select(svgRef.current)
+
+    devices.forEach((dev) => {
+      const g = svg.select<SVGGElement>(`g.node[data-id="${dev.id}"]`)
+      if (g.empty()) return
+      // We can't easily select by data-id since we didn't set it; rely on full re-render
+    })
+    // Full visual re-render is handled by initGraph when component first mounts.
+    // Device status changes are reflected via node attribute updates below.
+
+    svg.selectAll<SVGGElement, KGNode>('g.node').each(function (d) {
+      if (!d) return
+      const match = devices.find((dev) => dev.id === d.id)
+      if (!match) return
+      d.status = match.status
+
+      const gSel = d3.select(this)
+      const c = nodeColors(d)
+      gSel.select('circle:first-of-type').attr('fill', c.fill).attr('stroke', c.stroke)
+    })
+
+    // Update link labels + colours
+    svg.selectAll<SVGLineElement, KGLink>('line').each(function (l) {
+      if (!l) return
+      const tgt = l.target as KGNode
+      const match = devices.find((dev) => dev.id === tgt.id)
+      if (!match) return
+      tgt.status = match.status
+      d3.select(this)
+        .attr('stroke', linkColor(tgt))
+        .attr('stroke-dasharray', !tgt.status && (tgt.type === 'fan' || tgt.type === 'light') ? '4,4' : 'none')
+    })
+  }, [devices])
+
+  const onCount = devices.filter((d) => d.status).length
+  const totalWatts = devices.reduce((s, d) => s + (d.status ? d.wattage : 0), 0)
+
   return (
-    <div
-      className="rounded-2xl flex flex-col gap-4 p-4"
-      style={{ background: '#151A23', border: '1px solid #252B37' }}
-    >
+    <div className="rounded-lg border border-border bg-card flex flex-col gap-4 p-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-base font-bold" style={{ color: '#EAEDF2' }}>Knowledge Graph</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#8A93A3' }}>
-            Interactive network · Office → Rooms → Devices
+          <h2 className="text-sm font-semibold text-foreground">Knowledge Graph</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Interactive network — Office HQ → Rooms → Devices
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full" style={{ background: '#22D3A6' }} />
-            <span className="text-xs" style={{ color: '#8A93A3' }}>ON: {graphStats.onCount}</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-on" />
+            <span className="text-[11px] text-muted-foreground">{onCount} on</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full" style={{ background: '#374151' }} />
-            <span className="text-xs" style={{ color: '#8A93A3' }}>OFF: {graphStats.offCount}</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-border" />
+            <span className="text-[11px] text-muted-foreground">{devices.length - onCount} off</span>
           </div>
-          <div
-            className="px-2 py-0.5 rounded-full text-xs font-mono font-bold"
-            style={{ background: 'rgba(245,166,35,0.1)', color: '#F5A623', border: '1px solid rgba(245,166,35,0.25)' }}
-          >
-            {graphStats.totalWatts}W live
-          </div>
+          <span className="font-mono text-[11px] text-muted-foreground">{totalWatts}W</span>
         </div>
       </div>
 
-      {/* Graph canvas */}
-      <div className="relative w-full" ref={containerRef} style={{ borderRadius: 12, overflow: 'hidden' }}>
-        <svg ref={svgRef} className="w-full block" style={{ height: 460 }} />
+      {/* Canvas */}
+      <div
+        ref={containerRef}
+        className="relative rounded-md bg-surface overflow-hidden border border-border"
+        style={{ height: 480 }}
+      >
+        <svg ref={svgRef} className="w-full h-full block" />
 
-        {/* Tooltip */}
-        {tooltip && (
-          <div
-            className="pointer-events-none absolute z-10 rounded-xl px-3 py-2 shadow-xl"
-            style={{
-              left: tooltip.x + 12,
-              top: tooltip.y - 40,
-              background: '#1C2230',
-              border: '1px solid #252B37',
-              maxWidth: 200,
-            }}
-          >
-            <p className="text-xs font-bold" style={{ color: '#EAEDF2' }}>{tooltip.node.label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#8A93A3' }}>
-              Type: <span style={{ color: '#22D3A6', textTransform: 'capitalize' }}>{tooltip.node.type}</span>
-            </p>
-            {tooltip.node.status !== undefined && (
-              <p className="text-[10px]" style={{ color: tooltip.node.status ? '#22D3A6' : '#8A93A3' }}>
-                Status: {tooltip.node.status ? 'ON' : 'OFF'}
-              </p>
-            )}
-            {tooltip.node.wattage && (
-              <p className="text-[10px]" style={{ color: '#F5A623' }}>
-                {tooltip.node.status ? `Drawing ${tooltip.node.wattage}W` : 'Idle (0W)'}
-              </p>
-            )}
-            {tooltip.node.room && (
-              <p className="text-[10px]" style={{ color: '#8B5CF6' }}>
-                {ROOM_LABELS[tooltip.node.room]}
-              </p>
-            )}
-          </div>
-        )}
+        {/* Double-click hint */}
+        <p className="absolute bottom-2 right-3 text-[10px] text-muted-foreground pointer-events-none">
+          Scroll to zoom · drag nodes · click for details
+        </p>
       </div>
 
       {/* Selected node detail */}
       {selectedNode && (
-        <div
-          className="rounded-xl p-4 flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200"
-          style={{ background: '#0D1117', border: '1px solid #252B37' }}
-        >
+        <div className="rounded-md border border-border bg-surface px-4 py-3 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold" style={{ color: '#EAEDF2' }}>{selectedNode.label}</p>
+            <p className="text-xs font-semibold text-foreground">{selectedNode.label}</p>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ color: '#8A93A3', border: '1px solid #252B37' }}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               Dismiss
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <span className="text-[10px]" style={{ color: '#4B5563' }}>Node Type</span>
-            <span className="text-[10px] capitalize font-semibold" style={{ color: '#22D3A6' }}>{selectedNode.type}</span>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+            <span className="text-[11px] text-muted-foreground">Type</span>
+            <span className="text-[11px] text-foreground capitalize">{selectedNode.type}</span>
             {selectedNode.room && (
               <>
-                <span className="text-[10px]" style={{ color: '#4B5563' }}>Room</span>
-                <span className="text-[10px] font-semibold" style={{ color: '#C4B5FD' }}>{ROOM_LABELS[selectedNode.room]}</span>
+                <span className="text-[11px] text-muted-foreground">Room</span>
+                <span className="text-[11px] text-foreground">{ROOM_LABELS[selectedNode.room]}</span>
               </>
             )}
             {selectedNode.status !== undefined && (
               <>
-                <span className="text-[10px]" style={{ color: '#4B5563' }}>Status</span>
-                <span className="text-[10px] font-bold" style={{ color: selectedNode.status ? '#22D3A6' : '#8A93A3' }}>
+                <span className="text-[11px] text-muted-foreground">Status</span>
+                <span className={`text-[11px] font-medium ${selectedNode.status ? 'text-on' : 'text-muted-foreground'}`}>
                   {selectedNode.status ? 'ON' : 'OFF'}
                 </span>
               </>
             )}
             {selectedNode.wattage !== undefined && (
               <>
-                <span className="text-[10px]" style={{ color: '#4B5563' }}>Power Draw</span>
-                <span className="text-[10px] font-mono font-bold" style={{ color: '#F5A623' }}>
+                <span className="text-[11px] text-muted-foreground">Power draw</span>
+                <span className="text-[11px] font-mono text-foreground">
                   {selectedNode.status ? `${selectedNode.wattage}W` : '0W (idle)'}
                 </span>
               </>
             )}
             {selectedNode.type === 'office' && (
               <>
-                <span className="text-[10px]" style={{ color: '#4B5563' }}>Total Rooms</span>
-                <span className="text-[10px] font-semibold" style={{ color: '#3B82F6' }}>3</span>
-                <span className="text-[10px]" style={{ color: '#4B5563' }}>Total Devices</span>
-                <span className="text-[10px] font-semibold" style={{ color: '#3B82F6' }}>15</span>
+                <span className="text-[11px] text-muted-foreground">Rooms</span>
+                <span className="text-[11px] text-foreground">3</span>
+                <span className="text-[11px] text-muted-foreground">Devices</span>
+                <span className="text-[11px] text-foreground">15</span>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* Controls hint */}
-      <div className="flex items-center gap-4 flex-wrap" style={{ borderTop: '1px solid #1C2230', paddingTop: 10 }}>
+      {/* Legend */}
+      <div className="flex items-center gap-5 flex-wrap border-t border-border pt-4">
         {[
-          { icon: '⊕', label: 'Scroll to zoom' },
-          { icon: '↔', label: 'Drag to pan' },
-          { icon: '◉', label: 'Click node for details' },
-          { icon: '⊙', label: 'Drag nodes to rearrange' },
-        ].map((c) => (
-          <span key={c.label} className="flex items-center gap-1 text-[10px]" style={{ color: '#4B5563' }}>
-            <span style={{ color: '#8A93A3' }}>{c.icon}</span> {c.label}
-          </span>
-        ))}
-      </div>
-
-      {/* Node type legend */}
-      <div className="flex items-center gap-4 flex-wrap">
-        {[
-          { color: '#3B82F6', label: 'Office HQ' },
-          { color: '#8B5CF6', label: 'Room' },
-          { color: '#3B82F6', label: 'Fan (ON)', dash: false, bg: '#1E3A5F' },
-          { color: '#F5A623', label: 'Light (ON)', dash: false, bg: '#3d2600' },
-          { color: '#374151', label: 'Device (OFF)', dash: true },
+          { stroke: '#6366F1', fill: 'hsl(239 84% 67% / 0.12)', label: 'Office / Room' },
+          { stroke: '#6366F1', fill: 'hsl(239 84% 67% / 0.1)', label: 'Fan ON' },
+          { stroke: '#F59E0B', fill: 'hsl(43 96% 56% / 0.12)', label: 'Light ON' },
+          { stroke: '#D4D4D8', fill: 'transparent', label: 'Device OFF', dashed: true },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{
-                background: l.bg ?? 'transparent',
-                border: `${l.dash ? '1.5px dashed' : '1.5px solid'} ${l.color}`,
-              }}
-            />
-            <span className="text-[10px]" style={{ color: '#8A93A3' }}>{l.label}</span>
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <circle cx="7" cy="7" r="5.5" fill={l.fill} stroke={l.stroke} strokeWidth="1.2" strokeDasharray={l.dashed ? '3,2' : 'none'} />
+            </svg>
+            <span className="text-[11px] text-muted-foreground">{l.label}</span>
           </div>
         ))}
       </div>

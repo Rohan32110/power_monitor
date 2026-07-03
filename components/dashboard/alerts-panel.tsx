@@ -3,7 +3,7 @@
 import type { Alert } from '@/types'
 import { ROOM_LABELS } from '@/lib/config'
 
-interface AlertsPanelProps {
+interface Props {
   alerts: Alert[]
 }
 
@@ -14,121 +14,92 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m ago`
 }
 
-function AlertItem({ alert }: { alert: Alert }) {
+function AlertRow({ alert }: { alert: Alert }) {
   const isCritical = alert.severity === 'critical'
-  const color = isCritical ? '#F0526B' : '#F5A623'
-  const bg = isCritical ? 'rgba(240,82,107,0.06)' : 'rgba(245,166,35,0.06)'
-  const border = isCritical ? 'rgba(240,82,107,0.25)' : 'rgba(245,166,35,0.25)'
 
   return (
-    <div
-      className="flex flex-col gap-1.5 rounded-xl p-3"
-      style={{ background: bg, border: `1px solid ${border}` }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {/* severity icon */}
-          <div
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-            style={{ background: `${color}22` }}
-          >
-            <svg viewBox="0 0 16 16" className="h-3 w-3" fill={color}>
-              {isCritical ? (
-                <path d="M8 2L1 14h14L8 2Zm0 3v4m0 2v1" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-              ) : (
-                <path d="M8 5v4M8 11v1" stroke={color} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-              )}
-            </svg>
-          </div>
-          <div>
-            <span
-              className="text-[10px] uppercase tracking-widest font-bold"
-              style={{ color }}
-            >
-              {alert.type === 'after_hours' ? 'After Hours' : 'Continuous 2h+'}
-            </span>
-            <p className="text-xs font-semibold mt-0.5" style={{ color: '#EAEDF2' }}>
-              {ROOM_LABELS[alert.room]}
-            </p>
-          </div>
-        </div>
-        <span className="text-[10px] shrink-0 mt-0.5" style={{ color: '#8A93A3' }}>
-          {timeAgo(alert.triggered_at)}
-        </span>
+    <div className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+      {/* Severity dot */}
+      <div className="mt-0.5 shrink-0">
+        <span
+          className={`inline-flex h-1.5 w-1.5 rounded-full mt-1 ${isCritical ? 'bg-danger' : 'bg-warning'}`}
+        />
       </div>
-      <p className="text-[11px] leading-relaxed" style={{ color: '#8A93A3' }}>
-        {alert.message}
-      </p>
-      <p className="text-[10px]" style={{ color: '#4B5563' }}>
-        {new Date(alert.triggered_at).toLocaleString('en-BD', {
-          hour: '2-digit',
-          minute: '2-digit',
-          day: 'numeric',
-          month: 'short',
-        })}
-        {' · '}
-        {alert.device_ids.length} device{alert.device_ids.length !== 1 ? 's' : ''} affected
-      </p>
+
+      {/* Body */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-foreground">{ROOM_LABELS[alert.room]}</span>
+          <span
+            className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+              isCritical
+                ? 'bg-danger/10 text-danger'
+                : 'bg-warning/10 text-warning'
+            }`}
+          >
+            {alert.type === 'after_hours' ? 'After Hours' : 'Continuous 2h+'}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{alert.message}</p>
+      </div>
+
+      {/* Time */}
+      <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+        {timeAgo(alert.triggered_at)}
+      </span>
     </div>
   )
 }
 
-export function AlertsPanel({ alerts }: AlertsPanelProps) {
-  // Sort: newest first
+export function AlertsPanel({ alerts }: Props) {
   const sorted = [...alerts].sort(
     (a, b) => new Date(b.triggered_at).getTime() - new Date(a.triggered_at).getTime()
   )
 
   return (
-    <div
-      className="rounded-2xl p-5 flex flex-col gap-4"
-      style={{ background: '#151A23', border: '1px solid #252B37' }}
-    >
+    <div className="rounded-lg border border-border bg-card p-5 flex flex-col gap-4 h-full">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold" style={{ color: '#EAEDF2' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           Active Alerts
-        </h2>
+        </p>
         {sorted.length > 0 ? (
-          <span
-            className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(240,82,107,0.1)', color: '#F0526B', border: '1px solid rgba(240,82,107,0.2)' }}
-          >
-            <div className="h-1.5 w-1.5 rounded-full glow-on" style={{ background: '#F0526B' }} />
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-danger">
+            <span className="h-1.5 w-1.5 rounded-full bg-danger live-dot" />
             {sorted.length} active
           </span>
         ) : (
-          <span
-            className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(34,211,166,0.1)', color: '#22D3A6', border: '1px solid rgba(34,211,166,0.2)' }}
-          >
-            All clear
-          </span>
+          <span className="text-[11px] font-medium text-on">All clear</span>
         )}
       </div>
 
+      {/* List or empty */}
       {sorted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ background: 'rgba(34,211,166,0.08)' }}
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="#22D3A6" strokeWidth={1.5}>
-              <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="12" cy="12" r="9" />
+        <div className="flex flex-col items-center justify-center py-10 gap-2 flex-1">
+          <div className="h-8 w-8 rounded-full bg-on/10 flex items-center justify-center">
+            <svg viewBox="0 0 16 16" className="h-4 w-4 text-on" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M3 8l3.5 3.5L13 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <p className="text-sm font-semibold" style={{ color: '#22D3A6' }}>No active alerts</p>
-          <p className="text-xs text-center" style={{ color: '#8A93A3' }}>
+          <p className="text-sm font-medium text-foreground">No active alerts</p>
+          <p className="text-xs text-muted-foreground text-center">
             All devices are operating within normal parameters.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col">
           {sorted.map((alert) => (
-            <AlertItem key={alert.id} alert={alert} />
+            <AlertRow key={alert.id} alert={alert} />
           ))}
         </div>
       )}
+
+      {/* Info footer */}
+      <div className="mt-auto pt-3 border-t border-border">
+        <p className="text-[11px] text-muted-foreground">
+          Alerts fire when devices are on after 17:00, or all devices in a room have been on for 2+ hours continuously.
+        </p>
+      </div>
     </div>
   )
 }
