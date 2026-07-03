@@ -89,9 +89,9 @@ function nodeRadius(n: KGNode) {
 }
 
 function nodeColor(n: KGNode) {
-  if (n.kind === 'office') return '#4F46E5'
-  if (n.kind === 'room')   return '#6366F1'
-  return n.status ? '#22C55E' : '#94A3B8'
+  if (n.kind === 'office') return '#3B4663'
+  if (n.kind === 'room')   return '#2E3A55'
+  return n.status ? '#4A5568' : '#2A3350'
 }
 
 // ── Ghost KG icon ─────────────────────────────────────────────────────────────
@@ -147,10 +147,10 @@ function HeroCard({ devices }: { devices: Device[] }) {
 // ── Legend ────────────────────────────────────────────────────────────────────
 function Legend() {
   const items = [
-    { color: '#4F46E5', label: 'Office HQ' },
-    { color: '#6366F1', label: 'Room' },
-    { color: '#22C55E', label: 'Device ON' },
-    { color: '#94A3B8', label: 'Device OFF' },
+    { color: '#3B4663', label: 'Office HQ' },
+    { color: '#2E3A55', label: 'Room' },
+    { color: '#4A5568', label: 'Device ON' },
+    { color: '#2A3350', label: 'Device OFF' },
   ]
   return (
     <div className="flex items-center gap-4 px-1 mb-3 flex-wrap">
@@ -201,9 +201,9 @@ function NodeTooltip({ tooltip, containerRef }: TooltipProps) {
   const top = Math.max(4, Math.min(screenY - cardH / 2, containerH - cardH - 4))
 
   const dotColor =
-    node.kind === 'office' ? '#4F46E5' :
-    node.kind === 'room'   ? '#6366F1' :
-    node.status            ? '#22C55E' : '#94A3B8'
+    node.kind === 'office' ? '#3B4663' :
+    node.kind === 'room'   ? '#2E3A55' :
+    node.status            ? '#4A5568' : '#2A3350'
 
   return (
     <div
@@ -223,11 +223,7 @@ function NodeTooltip({ tooltip, containerRef }: TooltipProps) {
         <span className="text-xs font-semibold text-foreground truncate">{node.label}</span>
         {node.status !== undefined && (
           <span
-            className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
-            style={{
-              background: node.status ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.1)',
-              color: node.status ? '#22C55E' : '#94A3B8',
-            }}
+            className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0 bg-surface border border-border text-muted-foreground"
           >
             {node.status ? 'ON' : 'OFF'}
           </span>
@@ -321,9 +317,9 @@ function D3Graph({ devices }: GraphProps) {
         .attr('markerWidth', 5).attr('markerHeight', 6)
         .attr('orient', 'auto-start-reverse')
         .append('path').attr('d', 'M0,0 L0,6 L6,3 z').attr('fill', color)
-    mkMarker('a-room', '#6366F1')
-    mkMarker('a-on',   '#22C55E')
-    mkMarker('a-off',  '#94A3B8')
+    mkMarker('a-room', '#3B4663')
+    mkMarker('a-on',   '#4A5568')
+    mkMarker('a-off',  '#2A3350')
 
     const g = sel.append('g')
     gRef.current = g
@@ -341,7 +337,7 @@ function D3Graph({ devices }: GraphProps) {
     const linkSel = g.append('g').attr('class', 'links')
       .selectAll<SVGLineElement, KGLink>('line')
       .data(links).join('line')
-      .attr('stroke', (l) => l.source.kind === 'office' ? '#6366F1' : l.status ? '#22C55E' : '#94A3B8')
+      .attr('stroke', (l) => l.source.kind === 'office' ? '#3B4663' : l.status ? '#4A5568' : '#2A3350')
       .attr('stroke-width', (l) => l.source.kind === 'office' ? 1.8 : 1.2)
       .attr('stroke-dasharray', (l) => (l.source.kind !== 'office' && !l.status) ? '4 3' : null)
       .attr('stroke-opacity', 0.65)
@@ -377,14 +373,14 @@ function D3Graph({ devices }: GraphProps) {
       .on('mouseleave', () => setTooltip(null))
     nodeSelRef.current = nodeSel
 
-    // Glow ring for ON devices
+    // Subtle ring for ON devices
     nodeSel.filter((d) => d.status === true)
       .append('circle')
-      .attr('r', (d) => nodeRadius(d) + 5)
+      .attr('r', (d) => nodeRadius(d) + 4)
       .attr('fill', 'none')
-      .attr('stroke', '#22C55E')
+      .attr('stroke', '#4A5568')
       .attr('stroke-width', 1)
-      .attr('stroke-opacity', 0.3)
+      .attr('stroke-opacity', 0.4)
       .attr('stroke-dasharray', '3 2')
 
     // Circles

@@ -142,8 +142,8 @@ function deviceIcons(
 
 // ── Fan SVG (3-blade, 14×14 centered at 0,0) ─────────────────────────────────
 function FanIcon({ on }: { on: boolean }) {
-  const color = on ? '#6366F1' : '#3A4560'
-  const opacity = on ? 1 : 0.5
+  const color = on ? '#94A3B8' : '#3A4560'
+  const opacity = on ? 1 : 0.4
   return (
     <g opacity={opacity}>
       {/* hub */}
@@ -164,8 +164,8 @@ function FanIcon({ on }: { on: boolean }) {
 
 // ── Light-bulb SVG (14×16, centered at 0,0) ──────────────────────────────────
 function LightIcon({ on }: { on: boolean }) {
-  const color = on ? '#F59E0B' : '#3A4560'
-  const opacity = on ? 1 : 0.5
+  const color = on ? '#CBD5E1' : '#3A4560'
+  const opacity = on ? 1 : 0.4
   return (
     <g opacity={opacity}>
       {/* glow halo when on */}
@@ -251,7 +251,7 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
       {rooms.map(({ id, col, row, w, d }) => {
         const isSel = selectedRoom === id
         const def = isSel ? selectedDef[id] : roomDef[id]
-        const strokeColor = isSel ? '#6366F1' : '#2A3350'
+        const strokeColor = isSel ? '#475569' : '#2A3350'
         const strokeW = isSel ? 1.5 : 0.8
 
         const box = isoBox({
@@ -318,7 +318,7 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
               textAnchor="middle"
               fontSize={isSel ? 8.5 : 7.5}
               fontWeight={isSel ? 700 : 500}
-              fill={isSel ? '#818CF8' : '#94A3B8'}
+              fill={isSel ? '#94A3B8' : '#64748B'}
               letterSpacing="0.02em"
             >
               {ROOM_LABELS[id]}
@@ -331,7 +331,7 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
               const bx = (p00.x + p10.x + p01.x + p11.x) / 4
               const by = (p00.y + p10.y + p01.y + p11.y) / 4 - 6
               return (
-                <text x={bx} y={by} textAnchor="middle" fontSize={7} fill="#6366F1" fontWeight={600} opacity={0.85}>
+                <text x={bx} y={by} textAnchor="middle" fontSize={7} fill="#64748B" fontWeight={500} opacity={0.8}>
                   {watts}W
                 </text>
               )
@@ -374,20 +374,11 @@ function DeviceTile({ device }: { device: Device }) {
   return (
     <div
       className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 min-h-[80px] transition-all duration-300 select-none
-        ${on
-          ? isFan
-            ? 'border-primary/40 bg-primary/8 shadow-sm'
-            : 'border-warning/40 bg-warning/8 shadow-sm'
-          : 'border-border bg-surface opacity-50'
-        }`}
+        ${on ? 'border-border bg-surface shadow-sm' : 'border-border/40 bg-surface opacity-40'}`}
     >
-      {on && (
-        <span className={`absolute inset-0 rounded-xl pointer-events-none ring-1 ${isFan ? 'ring-primary/30' : 'ring-warning/30'}`} />
-      )}
-
       {isFan ? (
         <svg viewBox="0 0 24 24" fill="currentColor"
-          className={`h-6 w-6 ${on ? 'text-primary fan-spin' : 'text-muted-foreground'}`}>
+          className={`h-6 w-6 ${on ? 'fan-spin text-foreground' : 'text-muted-foreground'}`}>
           <circle cx="12" cy="12" r="2" />
           <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" />
           <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(120 12 12)" />
@@ -395,7 +386,7 @@ function DeviceTile({ device }: { device: Device }) {
         </svg>
       ) : (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}
-          className={`h-6 w-6 ${on ? 'text-warning' : 'text-muted-foreground'}`}>
+          className={`h-6 w-6 ${on ? 'text-foreground' : 'text-muted-foreground'}`}>
           <path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 4 12.65V18H8v-3.35A7 7 0 0 1 12 2z" />
         </svg>
       )}

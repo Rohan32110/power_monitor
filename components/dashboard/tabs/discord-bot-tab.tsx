@@ -112,8 +112,8 @@ function ChatSimulator() {
         <IconHash className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0" />
         <span className="text-sm font-semibold text-foreground">office-pulse-bot</span>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-on flex-shrink-0" />
-          <span className="text-xs font-medium text-on">Online</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+          <span className="text-xs font-medium text-muted-foreground">Online</span>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ function ChatSimulator() {
                 className={`rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words
                   ${msg.role === 'bot'
                     ? 'bg-surface text-muted-foreground rounded-tl-sm'
-                    : 'bg-primary text-primary-foreground rounded-tr-sm'
+                    : 'bg-[#1E2436] text-foreground border border-border rounded-tr-sm'
                   }`}
               >
                 {msg.role === 'bot' ? renderContent(msg.content) : msg.content}
@@ -180,7 +180,7 @@ function ChatSimulator() {
         <button
           onClick={() => send()}
           disabled={loading || !input.trim()}
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white disabled:opacity-40 hover:opacity-90 transition-opacity flex-shrink-0"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface border border-border text-muted-foreground disabled:opacity-40 hover:text-foreground hover:border-border/80 transition-colors flex-shrink-0"
           aria-label="Send"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
@@ -253,7 +253,7 @@ export function DiscordBotTab() {
                 key={c.cmd}
                 className={`flex items-center gap-3 px-4 py-3 ${i < COMMANDS.length - 1 ? 'border-b border-border' : ''}`}
               >
-                <code className="text-xs font-mono font-semibold text-primary min-w-[90px]">{c.cmd}</code>
+                <code className="text-xs font-mono font-medium text-foreground min-w-[90px]">{c.cmd}</code>
                 <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
               </div>
             ))}
@@ -264,8 +264,8 @@ export function DiscordBotTab() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-foreground">Bot status</span>
               <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-on live-dot" />
-                <span className="text-xs text-on font-medium">Operational</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Operational</span>
               </div>
             </div>
             <div className="flex flex-col gap-1.5 text-[11px]">
@@ -285,7 +285,7 @@ function StatusRow({ label, value, ok }: { label: string; value: string; ok: boo
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${ok ? 'bg-on' : 'bg-danger'}`} />
+        <span className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-muted-foreground" />
         <span className="text-foreground">{value}</span>
       </div>
     </div>

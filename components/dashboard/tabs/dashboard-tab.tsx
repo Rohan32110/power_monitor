@@ -104,17 +104,15 @@ function HeroCard({
         {/* Right: stat pills */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Devices on', value: `${totalOn}/${totalDevices}`, accent: false },
-            { label: 'Load',       value: `${loadPct}%`,                 accent: loadPct > 80 },
-            { label: 'Today kWh',  value: todayKwh.toFixed(3),           accent: false },
-            { label: 'Alerts',     value: String(alertCount),             accent: alertCount > 0 },
-          ].map(({ label, value, accent }) => (
+            { label: 'Devices on', value: `${totalOn}/${totalDevices}` },
+            { label: 'Load',       value: `${loadPct}%` },
+            { label: 'Today kWh',  value: todayKwh.toFixed(3) },
+          ].map(({ label, value }) => (
             <div
               key={label}
-              className={`flex flex-col items-center rounded-lg border px-3 py-2 min-w-[64px]
-                ${accent ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface'}`}
+              className="flex flex-col items-center rounded-lg border border-border bg-surface px-3 py-2 min-w-[64px]"
             >
-              <span className={`text-sm font-bold tabular-nums leading-none ${accent ? 'text-danger' : 'text-foreground'}`}>{value}</span>
+              <span className="text-sm font-bold tabular-nums leading-none text-foreground">{value}</span>
               <span className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{label}</span>
             </div>
           ))}
@@ -180,7 +178,7 @@ function RoomChart({ roomWatts }: { roomWatts: Record<string, number> }) {
     name: ROOM_LABELS[room as RoomId] ?? room,
     watts,
   }))
-  const COLORS = ['var(--primary)', '#6366F1', '#8B5CF6']
+  const COLORS = ['var(--muted-foreground)', 'var(--foreground)', '#4A5568']
   return (
     <Card className="relative overflow-hidden">
       <div className="pointer-events-none absolute right-3 top-3 h-16 w-16 text-primary">
@@ -207,12 +205,12 @@ function RoomChart({ roomWatts }: { roomWatts: Record<string, number> }) {
 // ── Alerts card ───────────────────────────────────────────────────────────────
 function AlertsCard({ alerts }: { alerts: Alert[] }) {
   const SEVERITY_STYLES: Record<string, string> = {
-    critical: 'border-danger/30 bg-danger/5 text-danger',
-    warning:  'border-warning/30 bg-warning/5 text-warning',
+    critical: 'border-border bg-card text-muted-foreground',
+    warning:  'border-border bg-card text-muted-foreground',
   }
   const TAG_STYLES: Record<string, string> = {
-    after_hours: 'bg-warning/10 text-warning',
-    all_on_2hr:  'bg-danger/10 text-danger',
+    after_hours: 'bg-surface text-muted-foreground border border-border',
+    all_on_2hr:  'bg-surface text-muted-foreground border border-border',
   }
   const TAG_LABELS: Record<string, string> = {
     after_hours: 'After hours',
@@ -246,7 +244,7 @@ function AlertsCard({ alerts }: { alerts: Alert[] }) {
               className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5 ${SEVERITY_STYLES[a.severity] ?? 'border-border'}`}
             >
               <div className="flex items-start gap-2 min-w-0">
-                <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current live-dot" />
+                <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-muted-foreground" />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold">{ROOM_LABELS[a.room] ?? a.room}</span>
@@ -302,17 +300,14 @@ function DeviceGrid({ devices }: { devices: Device[] }) {
                   <div
                     key={d.id}
                     className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors
-                      ${d.status ? 'bg-primary/5 border border-primary/15' : 'bg-surface border border-transparent'}`}
+                      ${d.status ? 'bg-surface border border-border' : 'bg-transparent border border-transparent'}`}
                   >
                     {/* Icon */}
                     <div className={`flex h-7 w-7 items-center justify-center rounded-md flex-shrink-0
-                      ${d.status
-                        ? d.device_type === 'fan' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
-                        : 'bg-muted text-muted-foreground'
-                      }`}
+                      ${d.status ? 'bg-surface text-foreground' : 'bg-muted text-muted-foreground'}`}
                     >
                       {d.device_type === 'fan' ? (
-                        <svg viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 ${d.status ? (d.status ? 'text-primary' : 'text-muted-foreground') + ' fan-spin' : 'text-muted-foreground'}`}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 ${d.status ? 'fan-spin' : ''} text-current`}>
                           <circle cx="12" cy="12" r="2" />
                           <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" />
                           <path d="M12 10 C10 7, 6 6, 6 10 C6 12, 9 13, 12 12 Z" opacity="0.9" transform="rotate(120 12 12)" />
