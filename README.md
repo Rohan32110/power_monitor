@@ -444,3 +444,64 @@ client.login(process.env.DISCORD_TOKEN)
 ```
 
 The in-browser **Discord Bot** tab simulates this interaction without needing a real Discord server or token — type commands or click the quick-action chips to see exactly what the bot would reply.
+
+---
+
+## Hardware Design
+
+### Circuit Schematic (Tinkercad-style)
+
+The schematic below documents the equivalent physical hardware setup for Power Monitor using an ESP32 DevKit v1. It mirrors the exact 3-room / 15-device layout simulated in software.
+
+![Power Monitor Circuit Schematic](https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-7OWowwQQKhEtjv3gh2sXlpVSyUmDhE.png)
+
+**3 Rooms · 9 Lights (15W each) · 6 Fans (60W each) · 15 Devices Total**
+
+The circuit uses:
+- **ESP32 DevKit v1** as the central microcontroller with WiFi 802.11 b/g/n
+- **Yellow LEDs** — represent lights (15W each), wired with 220Ω current-limiting resistors
+- **Blue LEDs / motor symbols** — represent fans (60W each), wired with 220Ω resistors
+- **Common GND rail** per room for clean wiring
+
+Each device maps to a dedicated GPIO pin. The ESP32 sketch connects to WiFi and POSTs the current device state JSON to the `/api/state` endpoint every 3 seconds, keeping the web dashboard in sync with physical hardware.
+
+### GPIO Pin Map
+
+| PIN | DEVICE | ROOM |
+|-----|--------|------|
+| D2  | Light 1 | Drawing Room |
+| D4  | Light 2 | Drawing Room |
+| D5  | Light 3 | Drawing Room |
+| D26 | Fan 1   | Drawing Room |
+| D27 | Fan 2   | Drawing Room |
+| D18 | Light 1 | Work Room 1 |
+| D19 | Light 2 | Work Room 1 |
+| D21 | Light 3 | Work Room 1 |
+| D22 | Fan 1   | Work Room 1 |
+| D23 | Fan 2   | Work Room 1 |
+| D32 | Light 1 | Work Room 2 |
+| D33 | Light 2 | Work Room 2 |
+| D34 | Light 3 | Work Room 2 |
+| D25 | Fan 1   | Work Room 2 |
+| D35 | Fan 2   | Work Room 2 |
+
+### Hardware Files
+
+The full hardware design is available in the `hardware/` directory:
+
+```
+hardware/
+├── wokwi/
+│   ├── diagram.json          # Wokwi project — open at wokwi.com/projects/new and import
+│   └── power_monitor.ino     # Arduino sketch — flash to ESP32 via Arduino IDE
+└── schematic/
+    └── power_monitor_schematic.svg   # Tinkercad-style SVG schematic (open in browser)
+```
+
+To simulate in Wokwi:
+1. Go to [wokwi.com](https://wokwi.com)
+2. Create a new project → ESP32
+3. Replace `diagram.json` with the file in `hardware/wokwi/`
+4. Paste the contents of `power_monitor.ino` into the sketch editor
+5. Update `WIFI_SSID`, `WIFI_PASSWORD`, and `API_URL` in the sketch
+6. Click Run

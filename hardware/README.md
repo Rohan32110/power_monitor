@@ -133,6 +133,15 @@ on the same 3-second tick cycle — the web app is fully functional either way.
 
 ## Schematic
 
-Open `schematic/power_monitor_schematic.svg` directly in any browser for a
-full-resolution, color-coded circuit diagram showing all 15 devices, resistors,
-GPIO labels, GND rails, and room groupings.
+![Power Monitor Circuit Schematic](https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-7OWowwQQKhEtjv3gh2sXlpVSyUmDhE.png)
+
+The schematic above shows the full circuit with:
+- ESP32 DevKit v1 at the center
+- 3 room panels (Drawing Room, Work Room 1, Work Room 2)
+- Yellow LEDs for lights, blue symbols for fans
+- 220Ω resistors on every device line
+- Common GND rail per room
+- GPIO labels on every connection
+
+The vector version `schematic/power_monitor_schematic.svg` can also be opened
+directly in any browser for full-resolution, zoomable detail.
