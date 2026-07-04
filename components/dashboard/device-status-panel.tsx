@@ -7,6 +7,7 @@ import { DeviceCard } from './device-card'
 interface Props {
   devices: Device[]
 }
+// Receives a room ID and its list of devices as props.
 
 function RoomCard({ room, devices }: { room: RoomId; devices: Device[] }) {
   const roomDevices = devices.filter((d) => d.room === room)
