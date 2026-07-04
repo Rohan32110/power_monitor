@@ -444,3 +444,91 @@ client.login(process.env.DISCORD_TOKEN)
 ```
 
 The in-browser **Discord Bot** tab simulates this interaction without needing a real Discord server or token — type commands or click the quick-action chips to see exactly what the bot would reply.
+
+---
+
+## Hardware Design
+
+### Circuit Schematic (Tinkercad-style)
+
+The schematic below is the full hardware equivalent of the Power Monitor software simulation. It is designed around an **ESP32 DevKit v1** and maps the exact same 3-room, 15-device office layout that the dashboard monitors in real time.
+
+![Power Monitor Circuit Schematic — ESP32 DevKit v1, 3 Rooms, 15 Devices](https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-7OWowwQQKhEtjv3gh2sXlpVSyUmDhE.png)
+
+**3 Rooms · 9 Lights (15W each) · 6 Fans (60W each) · 15 Devices Total**
+
+#### What the schematic shows
+
+**Center — ESP32 DevKit v1**
+The microcontroller sits in the middle of the diagram. It provides 15 usable GPIO output pins (one per device), a built-in WiFi 802.11 b/g/n radio for HTTP communication with the Next.js API, and is powered via Micro-USB (5V). All device signal wires originate from the ESP32 and fan out to their respective room panels.
+
+**Top-left — Drawing Room**
+Contains 3 yellow LEDs (Lights 1–3) and 2 blue fan symbols (Fans 1–2). Each device is connected to its GPIO pin through a 220Ω current-limiting resistor and returns to the common GND rail at the bottom of the panel. GPIO pins used: D2 (L1), D4 (L2), D5 (L3), D26 (F1), D27 (F2).
+
+**Bottom-left — Work Room 1**
+Identical layout to Drawing Room — 3 lights and 2 fans. The GND rail is shared across all 5 devices in the panel. GPIO pins used: D18 (L1), D19 (L2), D21 (L3), D22 (F1), D23 (F2).
+
+**Top-right — Work Room 2**
+Same 5-device layout. Positioned on the opposite side of the ESP32 to reflect a realistic cable-routing layout. GPIO pins used: D32 (L1), D33 (L2), D34 (L3), D25 (F1), D35 (F2).
+
+**Wiring colour code (visible in schematic)**
+- Orange dashed lines — light signal wires (GPIO → LED anode)
+- Blue dashed lines — fan signal wires (GPIO → fan symbol)
+- Red solid line — common GND rail per room (cathode of all devices → GND)
+- Each device line passes through a 220Ω resistor before reaching the component
+
+**Bottom-left table — GPIO Pin Map**
+Lists every PIN, DEVICE name, and ROOM for all 15 outputs in a readable reference table, matching the pin assignments used in `power_monitor.ino`.
+
+**Bottom-right — Legend**
+- Yellow circle = Light (LED) — 15W per device
+- Blue square = Fan (motor symbol) — 60W per device
+- Grey rectangle = 220Ω current-limiting resistor
+- Orange dashed = Light signal wire
+- Blue dashed = Fan signal wire
+- Red solid = GND rail (common ground)
+
+#### How it connects to the web app
+
+When flashed with `power_monitor.ino`, the ESP32 reads the HIGH/LOW state of each GPIO pin every 3 seconds, packages it as a JSON payload (device ID, room, status, wattage), and POSTs it to the `/api/state` endpoint of the deployed Next.js app. The dashboard processes the payload, updates in-memory state, persists the snapshot to Supabase, and pushes the change to all connected browser clients via the SSE stream — closing the hardware-to-dashboard loop in under one second.
+
+### GPIO Pin Map
+
+| PIN | DEVICE | ROOM |
+|-----|--------|------|
+| D2  | Light 1 | Drawing Room |
+| D4  | Light 2 | Drawing Room |
+| D5  | Light 3 | Drawing Room |
+| D26 | Fan 1   | Drawing Room |
+| D27 | Fan 2   | Drawing Room |
+| D18 | Light 1 | Work Room 1 |
+| D19 | Light 2 | Work Room 1 |
+| D21 | Light 3 | Work Room 1 |
+| D22 | Fan 1   | Work Room 1 |
+| D23 | Fan 2   | Work Room 1 |
+| D32 | Light 1 | Work Room 2 |
+| D33 | Light 2 | Work Room 2 |
+| D34 | Light 3 | Work Room 2 |
+| D25 | Fan 1   | Work Room 2 |
+| D35 | Fan 2   | Work Room 2 |
+
+### Hardware Files
+
+The full hardware design is available in the `hardware/` directory:
+
+```
+hardware/
+├── wokwi/
+│   ├── diagram.json          # Wokwi project — open at wokwi.com/projects/new and import
+│   └── power_monitor.ino     # Arduino sketch — flash to ESP32 via Arduino IDE
+└── schematic/
+    └── power_monitor_schematic.svg   # Tinkercad-style SVG schematic (open in browser)
+```
+
+To simulate in Wokwi:
+1. Go to [wokwi.com](https://wokwi.com)
+2. Create a new project → ESP32
+3. Replace `diagram.json` with the file in `hardware/wokwi/`
+4. Paste the contents of `power_monitor.ino` into the sketch editor
+5. Update `WIFI_SSID`, `WIFI_PASSWORD`, and `API_URL` in the sketch
+6. Click Run
