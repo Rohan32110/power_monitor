@@ -9,7 +9,7 @@ const MAX_WATTS = 495
 interface Props {
   energy: EnergyLog
 }
-
+//power meter prop destructure kora lagbe , calculations seem good!
 export function PowerMeter({ energy }: Props) {
   const loadPct = Math.min(100, Math.round((energy.total_watts / MAX_WATTS) * 100))
   const rooms = [
