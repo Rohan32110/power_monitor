@@ -39,7 +39,6 @@ const COMMANDS = [
   { cmd: '!room drawing', desc: 'Drawing Room details' },
   { cmd: '!room work1',   desc: 'Work Room 1 details' },
   { cmd: '!room work2',   desc: 'Work Room 2 details' },
-  { cmd: '!alerts',       desc: 'Active alerts list' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -127,7 +126,7 @@ function ChatSimulator() {
                 className={`rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words
                   ${msg.role === 'bot'
                     ? 'bg-surface text-muted-foreground rounded-tl-sm'
-                    : 'bg-[#1E2436] text-foreground border border-border rounded-tr-sm'
+                    : 'bg-muted text-foreground border border-border rounded-tr-sm'
                   }`}
               >
                 {msg.role === 'bot' ? renderContent(msg.content) : msg.content}

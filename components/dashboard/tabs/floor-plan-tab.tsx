@@ -142,8 +142,8 @@ function deviceIcons(
 
 // ── Fan SVG (3-blade, 14×14 centered at 0,0) ─────────────────────────────────
 function FanIcon({ on }: { on: boolean }) {
-  const color = on ? '#94A3B8' : '#3A4560'
-  const opacity = on ? 1 : 0.4
+  const color = on ? '#CBD5E1' : '#3A4560'
+  const opacity = on ? 1 : 0.35
   return (
     <g opacity={opacity}>
       {/* hub */}
@@ -164,23 +164,23 @@ function FanIcon({ on }: { on: boolean }) {
 
 // ── Light-bulb SVG (14×16, centered at 0,0) ──────────────────────────────────
 function LightIcon({ on }: { on: boolean }) {
-  const color = on ? '#CBD5E1' : '#3A4560'
-  const opacity = on ? 1 : 0.4
   return (
-    <g opacity={opacity}>
-      {/* glow halo when on */}
-      {on && <circle r={7} fill={color} fillOpacity={0.15} />}
+    <g opacity={on ? 1 : 0.35}>
+      {/* Outer glow — only when ON */}
+      {on && <circle r={11} fill="#FFFBEB" fillOpacity={0.18} />}
+      {on && <circle r={8}  fill="#FEF9C3" fillOpacity={0.28} />}
       {/* bulb body */}
       <path
         d="M0 -6 A4.5 4.5 0 0 1 4.5 -1.5 L3 2 L-3 2 L-4.5 -1.5 A4.5 4.5 0 0 1 0 -6 Z"
-        fill={color}
-        fillOpacity={0.85}
+        fill={on ? '#FEFCE8' : '#3A4560'}
+        fillOpacity={on ? 1 : 0.8}
       />
       {/* base collar */}
-      <rect x="-3" y="2" width="6" height="1.5" rx="0.5" fill={color} fillOpacity={0.7} />
-      <rect x="-2.5" y="3.5" width="5" height="1.5" rx="0.5" fill={color} fillOpacity={0.5} />
-      {/* filament glow when on */}
-      {on && <circle r={1.5} cy={-1} fill="#FEF3C7" fillOpacity={0.9} />}
+      <rect x="-3"   y="2"   width="6" height="1.5" rx="0.5" fill={on ? '#FDE68A' : '#3A4560'} fillOpacity={on ? 0.9 : 0.6} />
+      <rect x="-2.5" y="3.5" width="5" height="1.5" rx="0.5" fill={on ? '#FCD34D' : '#3A4560'} fillOpacity={on ? 0.7 : 0.5} />
+      {/* bright filament core when on */}
+      {on && <circle r={2} cy={-1.5} fill="#FFFFFF" fillOpacity={1} />}
+      {on && <circle r={1} cy={-1.5} fill="#FEF9C3" fillOpacity={1} />}
     </g>
   )
 }
@@ -374,7 +374,11 @@ function DeviceTile({ device }: { device: Device }) {
   return (
     <div
       className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 min-h-[80px] transition-all duration-300 select-none
-        ${on ? 'border-border bg-surface shadow-sm' : 'border-border/40 bg-surface opacity-40'}`}
+        ${on
+          ? isFan
+            ? 'border-border bg-surface shadow-sm'
+            : 'border-yellow-200/30 dark:border-yellow-400/20 bg-yellow-50/60 dark:bg-yellow-900/10 shadow-sm'
+          : 'border-border/40 bg-surface opacity-40'}`}
     >
       {isFan ? (
         <svg viewBox="0 0 24 24" fill="currentColor"
@@ -386,7 +390,7 @@ function DeviceTile({ device }: { device: Device }) {
         </svg>
       ) : (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}
-          className={`h-6 w-6 ${on ? 'text-foreground' : 'text-muted-foreground'}`}>
+          className={`h-6 w-6 ${on ? 'text-yellow-400 dark:text-yellow-300' : 'text-muted-foreground'}`}>
           <path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 4 12.65V18H8v-3.35A7 7 0 0 1 12 2z" />
         </svg>
       )}

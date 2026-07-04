@@ -91,7 +91,8 @@ function nodeRadius(n: KGNode) {
 function nodeColor(n: KGNode) {
   if (n.kind === 'office') return '#3B4663'
   if (n.kind === 'room')   return '#2E3A55'
-  return n.status ? '#4A5568' : '#2A3350'
+  // ON devices: bright warm-white so they visually "glow on"; OFF: dim navy
+  return n.status ? '#E2E8F0' : '#2A3350'
 }
 
 // ── Ghost KG icon ─────────────────────────────────────────────────────────────
@@ -149,7 +150,7 @@ function Legend() {
   const items = [
     { color: '#3B4663', label: 'Office HQ' },
     { color: '#2E3A55', label: 'Room' },
-    { color: '#4A5568', label: 'Device ON' },
+    { color: '#E2E8F0', label: 'Device ON' },
     { color: '#2A3350', label: 'Device OFF' },
   ]
   return (
@@ -373,15 +374,15 @@ function D3Graph({ devices }: GraphProps) {
       .on('mouseleave', () => setTooltip(null))
     nodeSelRef.current = nodeSel
 
-    // Subtle ring for ON devices
+    // Bright glow ring for ON devices — solid, clearly visible
     nodeSel.filter((d) => d.status === true)
       .append('circle')
-      .attr('r', (d) => nodeRadius(d) + 4)
-      .attr('fill', 'none')
-      .attr('stroke', '#4A5568')
-      .attr('stroke-width', 1)
-      .attr('stroke-opacity', 0.4)
-      .attr('stroke-dasharray', '3 2')
+      .attr('r', (d) => nodeRadius(d) + 5)
+      .attr('fill', '#E2E8F0')
+      .attr('fill-opacity', 0.08)
+      .attr('stroke', '#CBD5E1')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-opacity', 0.7)
 
     // Circles
     nodeSel.append('circle')
@@ -396,7 +397,7 @@ function D3Graph({ devices }: GraphProps) {
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'central')
       .attr('font-size', (d) => d.kind === 'office' ? 11 : 8)
-      .attr('fill', (d) => d.kind === 'office' ? '#fff' : d.status ? '#fff' : '#64748B')
+      .attr('fill', (d) => d.kind === 'office' ? '#fff' : d.status ? '#1E293B' : '#64748B')
       .attr('pointer-events', 'none')
       .text((d) => d.kind === 'office' ? 'HQ' : d.kind === 'fan' ? 'F' : 'L')
 
