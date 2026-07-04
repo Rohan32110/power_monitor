@@ -1,6 +1,24 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+// Reactively tracks whether the <html> element has the "dark" class,
+// so SVG palette can switch without a page reload.
+function useIsDark() {
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+  useEffect(() => {
+    const el = document.documentElement
+    setIsDark(el.classList.contains('dark'))
+    const obs = new MutationObserver(() =>
+      setIsDark(el.classList.contains('dark'))
+    )
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] })
+    return () => obs.disconnect()
+  }, [])
+  return isDark
+}
 import type { Device, RoomId } from '@/types'
 import { ROOM_LABELS } from '@/lib/config'
 
@@ -202,17 +220,34 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
     { id: 'work_room_2',  col: 1.6, row: 3.2, w: 3, d: 3 },
   ]
 
-  // Dark theme palette
-  const roomDef: Record<RoomId, { top: string; left: string; right: string }> = {
-    drawing_room: { top: '#1E2436', left: '#252D42', right: '#1A2035' },
-    work_room_1:  { top: '#1A2035', left: '#20283C', right: '#161D30' },
-    work_room_2:  { top: '#1E2436', left: '#252D42', right: '#1A2035' },
-  }
-  const selectedDef: Record<RoomId, { top: string; left: string; right: string }> = {
-    drawing_room: { top: '#272E4A', left: '#2E3655', right: '#222944' },
-    work_room_1:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
-    work_room_2:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
-  }
+  const isDark = useIsDark()
+
+  // Palette switches between dark navy and light ash depending on theme
+  const roomDef: Record<RoomId, { top: string; left: string; right: string }> = isDark
+    ? {
+        drawing_room: { top: '#1E2436', left: '#252D42', right: '#1A2035' },
+        work_room_1:  { top: '#1A2035', left: '#20283C', right: '#161D30' },
+        work_room_2:  { top: '#1E2436', left: '#252D42', right: '#1A2035' },
+      }
+    : {
+        // Light theme: soft ash tones — top face lightest, walls slightly darker
+        drawing_room: { top: '#D4D7DE', left: '#BFC3CC', right: '#C8CCD4' },
+        work_room_1:  { top: '#CDD0D8', left: '#B8BCC5', right: '#C2C6CE' },
+        work_room_2:  { top: '#D4D7DE', left: '#BFC3CC', right: '#C8CCD4' },
+      }
+
+  const selectedDef: Record<RoomId, { top: string; left: string; right: string }> = isDark
+    ? {
+        drawing_room: { top: '#272E4A', left: '#2E3655', right: '#222944' },
+        work_room_1:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
+        work_room_2:  { top: '#272E4A', left: '#2E3655', right: '#222944' },
+      }
+    : {
+        // Selected state: slightly deeper ash with a cool undertone
+        drawing_room: { top: '#BEC3CC', left: '#A9AEB8', right: '#B4B9C3' },
+        work_room_1:  { top: '#BEC3CC', left: '#A9AEB8', right: '#B4B9C3' },
+        work_room_2:  { top: '#BEC3CC', left: '#A9AEB8', right: '#B4B9C3' },
+      }
 
   // Compute SVG bounds
   const allPts = rooms.flatMap(({ col, row, w, d }) => [
@@ -251,7 +286,9 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
       {rooms.map(({ id, col, row, w, d }) => {
         const isSel = selectedRoom === id
         const def = isSel ? selectedDef[id] : roomDef[id]
-        const strokeColor = isSel ? '#475569' : '#2A3350'
+        const strokeColor = isDark
+          ? (isSel ? '#475569' : '#2A3350')
+          : (isSel ? '#8A8F9A' : '#A0A5B0')
         const strokeW = isSel ? 1.5 : 0.8
 
         const box = isoBox({
@@ -318,7 +355,9 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
               textAnchor="middle"
               fontSize={isSel ? 8.5 : 7.5}
               fontWeight={isSel ? 700 : 500}
-              fill={isSel ? '#94A3B8' : '#64748B'}
+              fill={isDark
+                ? (isSel ? '#94A3B8' : '#64748B')
+                : (isSel ? '#374151' : '#4B5563')}
               letterSpacing="0.02em"
             >
               {ROOM_LABELS[id]}
@@ -331,7 +370,7 @@ function IsoFloorPlan({ byRoom, selectedRoom, onSelectRoom }: IsoFloorPlanProps)
               const bx = (p00.x + p10.x + p01.x + p11.x) / 4
               const by = (p00.y + p10.y + p01.y + p11.y) / 4 - 6
               return (
-                <text x={bx} y={by} textAnchor="middle" fontSize={7} fill="#64748B" fontWeight={500} opacity={0.8}>
+                <text x={bx} y={by} textAnchor="middle" fontSize={7} fill={isDark ? '#64748B' : '#374151'} fontWeight={500} opacity={0.9}>
                   {watts}W
                 </text>
               )
