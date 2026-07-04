@@ -25,9 +25,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark bg-background h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} bg-background h-full`}
       suppressHydrationWarning
     >
+      {/*
+        This script runs synchronously before the browser paints anything.
+        It reads the user's stored preference from localStorage and applies
+        the correct class to <html> immediately, preventing any flash of
+        the wrong theme on page load or refresh.
+      */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('op-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="bg-background text-foreground font-sans antialiased h-full">
         {children}
       </body>

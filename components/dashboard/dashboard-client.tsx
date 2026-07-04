@@ -20,18 +20,14 @@ interface NavItem {
 
 // ── Theme hook ────────────────────────────────────────────────────────────────
 function useTheme() {
-  // Default to dark — only switch to light if user explicitly stored 'light'
-  const [dark, setDark] = useState(true)
-  useEffect(() => {
-    const stored = localStorage.getItem('op-theme')
-    if (stored === 'light') {
-      setDark(false)
-      document.documentElement.classList.remove('dark')
-    } else {
-      setDark(true)
-      document.documentElement.classList.add('dark')
-    }
-  }, [])
+  // Lazy initializer: reads localStorage on the first render so state and DOM
+  // class are in sync from frame 1 (the blocking script in layout.tsx already
+  // set the class; we just mirror it into React state here).
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('op-theme') !== 'light'
+  })
+
   const toggle = useCallback(() => {
     setDark((prev) => {
       const next = !prev
@@ -40,6 +36,7 @@ function useTheme() {
       return next
     })
   }, [])
+
   return { dark, toggle }
 }
 
