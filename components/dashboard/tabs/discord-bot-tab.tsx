@@ -53,7 +53,7 @@ function ChatSimulator() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'bot',
-      content: 'Office Pulse is online. Try a command like **!status** to check the live office state, or click a quick command below.',
+      content: 'Power Monitor is online. Try a command like **!status** to check the live office state, or click a quick command below.',
       ts: now12(),
     },
   ])
@@ -109,7 +109,7 @@ function ChatSimulator() {
       {/* Discord-style channel header */}
       <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border bg-surface flex-shrink-0">
         <IconHash className="h-4.5 w-4.5 text-muted-foreground flex-shrink-0" />
-        <span className="text-sm font-semibold text-foreground">office-pulse-bot</span>
+        <span className="text-sm font-semibold text-foreground">power-monitor-bot</span>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
           <span className="text-xs font-medium text-muted-foreground">Online</span>
@@ -173,7 +173,7 @@ function ChatSimulator() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) send()
           }}
-          placeholder="Message #office-pulse-bot"
+          placeholder="Message #power-monitor-bot"
           className="flex-1 bg-surface border border-border rounded-xl px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
         />
         <button
@@ -211,7 +211,7 @@ export function DiscordBotTab() {
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
                 Discord integration
               </p>
-              <h1 className="text-xl font-bold text-foreground leading-snug">Office Pulse Bot</h1>
+              <h1 className="text-xl font-bold text-foreground leading-snug">Power Monitor Bot</h1>
             </div>
           </div>
 

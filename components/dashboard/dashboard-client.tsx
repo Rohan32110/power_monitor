@@ -242,7 +242,7 @@ export function DashboardClient() {
                   </svg>
                 </div>
                 <span className="slide-in-left truncate text-sm font-semibold text-foreground">
-                  Office Pulse
+                  Power Monitor
                 </span>
               </div>
               <button
@@ -347,7 +347,7 @@ export function DashboardClient() {
         {/* Footer */}
         <footer className="flex-shrink-0 border-t border-border bg-background px-6 py-2.5 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Office Pulse · Live monitoring · State persisted across sessions
+            Power Monitor · Live monitoring · State persisted across sessions
           </p>
           <p className="text-xs text-muted-foreground font-mono tabular-nums">
             {lastUpdate

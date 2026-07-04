@@ -34,7 +34,7 @@ export function DiscordBotPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       from: 'bot',
-      text: "Hey! I'm Pulse, the Office Pulse Discord bot. Try any of the commands below to query live device data. In your Discord server, you'd type these commands directly in a channel — here you can preview what the bot would respond.",
+      text: "Hey! I'm the Power Monitor Discord bot. Try any of the commands below to query live device data. In your Discord server, you'd type these commands directly in a channel — here you can preview what the bot would respond.",
       ts: new Date(),
     },
   ])
@@ -146,7 +146,7 @@ export function DiscordBotPanel() {
         {/* Discord-style header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-surface">
           <div className="h-2 w-2 rounded-full bg-on" />
-          <p className="text-xs font-semibold text-foreground">#office-pulse-bot</p>
+          <p className="text-xs font-semibold text-foreground">#power-monitor-bot</p>
           <span className="ml-auto text-[10px] text-muted-foreground">Preview — calls live /api/discord</span>
         </div>
 
