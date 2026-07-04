@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDevices, getActiveAlerts, getEnergyData } from '@/lib/simulator'
 import { ROOM_LIST, ROOM_LABELS } from '@/lib/config'
 import type { RoomId } from '@/types'
-import OpenAI from 'openai'
+import Groq from 'groq-sdk'
 
-// Instantiated lazily — avoid module-level crash when OPENAI_API_KEY is absent
-let _openai: OpenAI | null = null
-function getOpenAI() {
-  if (!process.env.OPENAI_API_KEY) return null
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  return _openai
+// Instantiated lazily — avoid module-level crash when GROQ_API_KEY is absent
+let _groq: Groq | null = null
+function getGroq() {
+  if (!process.env.GROQ_API_KEY) return null
+  if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  return _groq
 }
 
 /**
@@ -63,12 +63,12 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Use OpenAI to generate a friendly response if key is set, otherwise use raw data
-  const openai = getOpenAI()
-  if (openai) {
+  // Use Groq to generate a friendly response if key is set, otherwise use raw data
+  const groq = getGroq()
+  if (groq) {
     try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const completion = await groq.chat.completions.create({
+        model: 'llama3-8b-8192',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: rawData },
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       const text = completion.choices[0]?.message?.content ?? rawData
       return NextResponse.json({ response: text })
     } catch {
-      // Fall through to raw response if OpenAI fails
+      // Fall through to raw response if Groq fails
     }
   }
 
