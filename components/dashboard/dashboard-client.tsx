@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Device, Alert, EnergyLog, OfficeState } from '@/types'
 import { DashboardTab }     from './tabs/dashboard-tab'
@@ -236,10 +238,8 @@ export function DashboardClient() {
           {sidebarOpen ? (
             <>
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-white" stroke="currentColor" strokeWidth={1.8}>
-                    <path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" strokeLinejoin="round" strokeLinecap="round" />
-                  </svg>
+                <div className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-black shadow-sm">
+                  <Image src="/logo.png" alt="Power Monitor logo" width={28} height={28} className="object-cover" />
                 </div>
                 <span className="slide-in-left truncate text-sm font-semibold text-foreground">
                   Power Monitor
@@ -255,10 +255,8 @@ export function DashboardClient() {
             </>
           ) : (
             <>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-white" stroke="currentColor" strokeWidth={1.8}>
-                  <path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" strokeLinejoin="round" strokeLinecap="round" />
-                </svg>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-black shadow-sm">
+                <Image src="/logo.png" alt="Power Monitor logo" width={28} height={28} className="object-cover" />
               </div>
               <button
                 onClick={() => setSidebarOpen(true)}
