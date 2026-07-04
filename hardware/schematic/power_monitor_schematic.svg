@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" width="1100" height="820" font-family="monospace" font-size="11">
+
+  <!-- Background -->
+  <rect width="1100" height="820" fill="#1a1a2e" rx="12"/>
+
+  <!-- Title -->
+  <text x="550" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Power Monitor — Circuit Schematic (ESP32 DevKit v1)</text>
+  <text x="550" y="56" text-anchor="middle" font-size="12" fill="#94a3b8" font-family="sans-serif">3 Rooms · 9 Lights (15W each) · 6 Fans (60W each) · 15 Devices Total</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ESP32 MCU block -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="420" y="340" width="180" height="300" rx="6" fill="#0f3460" stroke="#4a90d9" stroke-width="2"/>
+  <text x="510" y="362" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a90d9" font-family="sans-serif">ESP32</text>
+  <text x="510" y="378" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="sans-serif">DevKit v1</text>
+
+  <!-- Left-side pins (GPIO outputs) -->
+  <!-- Light pins column -->
+  <text x="415" y="404" text-anchor="end" font-size="10" fill="#fbbf24">D2</text>
+  <line x1="416" y1="400" x2="420" y2="400" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="424" text-anchor="end" font-size="10" fill="#fbbf24">D4</text>
+  <line x1="416" y1="420" x2="420" y2="420" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="444" text-anchor="end" font-size="10" fill="#fbbf24">D5</text>
+  <line x1="416" y1="440" x2="420" y2="440" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="464" text-anchor="end" font-size="10" fill="#fbbf24">D18</text>
+  <line x1="416" y1="460" x2="420" y2="460" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="484" text-anchor="end" font-size="10" fill="#fbbf24">D19</text>
+  <line x1="416" y1="480" x2="420" y2="480" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="504" text-anchor="end" font-size="10" fill="#fbbf24">D21</text>
+  <line x1="416" y1="500" x2="420" y2="500" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="524" text-anchor="end" font-size="10" fill="#fbbf24">D22</text>
+  <line x1="416" y1="520" x2="420" y2="520" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="544" text-anchor="end" font-size="10" fill="#fbbf24">D23</text>
+  <line x1="416" y1="540" x2="420" y2="540" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <text x="415" y="564" text-anchor="end" font-size="10" fill="#fbbf24">D25</text>
+  <line x1="416" y1="560" x2="420" y2="560" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <!-- Fan pins (right side of ESP) -->
+  <text x="605" y="404" text-anchor="start" font-size="10" fill="#60a5fa">D26</text>
+  <line x1="600" y1="400" x2="604" y2="400" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <text x="605" y="424" text-anchor="start" font-size="10" fill="#60a5fa">D27</text>
+  <line x1="600" y1="420" x2="604" y2="420" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <text x="605" y="444" text-anchor="start" font-size="10" fill="#60a5fa">D32</text>
+  <line x1="600" y1="440" x2="604" y2="440" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <text x="605" y="464" text-anchor="start" font-size="10" fill="#60a5fa">D33</text>
+  <line x1="600" y1="460" x2="604" y2="460" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <text x="605" y="484" text-anchor="start" font-size="10" fill="#60a5fa">D34</text>
+  <line x1="600" y1="480" x2="604" y2="480" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <text x="605" y="504" text-anchor="start" font-size="10" fill="#60a5fa">D35</text>
+  <line x1="600" y1="500" x2="604" y2="500" stroke="#60a5fa" stroke-width="1.5"/>
+
+  <!-- GND and 3V3 -->
+  <text x="415" y="604" text-anchor="end" font-size="10" fill="#f87171">GND</text>
+  <line x1="416" y1="600" x2="420" y2="600" stroke="#f87171" stroke-width="1.5"/>
+  <text x="415" y="624" text-anchor="end" font-size="10" fill="#4ade80">3V3</text>
+  <line x1="416" y1="620" x2="420" y2="620" stroke="#4ade80" stroke-width="1.5"/>
+
+  <!-- WiFi label -->
+  <rect x="450" y="620" width="120" height="20" rx="4" fill="#1e3a5f" stroke="#4a90d9" stroke-width="1"/>
+  <text x="510" y="634" text-anchor="middle" font-size="10" fill="#93c5fd">WiFi 802.11 b/g/n</text>
+
+  <!-- USB label -->
+  <rect x="460" y="645" width="100" height="18" rx="4" fill="#1e3a5f" stroke="#4a90d9" stroke-width="1"/>
+  <text x="510" y="658" text-anchor="middle" font-size="10" fill="#93c5fd">Micro-USB (5V)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DRAWING ROOM section -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="30" y="80" width="320" height="230" rx="6" fill="#0d2137" stroke="#334155" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="190" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Drawing Room</text>
+
+  <!-- DR Light 1 -->
+  <g transform="translate(60,125)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D2</text>
+    <!-- resistor above -->
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+
+  <!-- DR Light 2 -->
+  <g transform="translate(130,125)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D4</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+
+  <!-- DR Light 3 -->
+  <g transform="translate(200,125)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L3</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D5</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+
+  <!-- DR Fan 1 -->
+  <g transform="translate(260,125)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D26</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+
+  <!-- DR Fan 2 -->
+  <g transform="translate(320,125)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D27</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+
+  <!-- GND rail DR -->
+  <line x1="44" y1="200" x2="350" y2="200" stroke="#f87171" stroke-width="1.5"/>
+  <text x="190" y="215" text-anchor="middle" font-size="9" fill="#f87171">GND Rail</text>
+  <line x1="60"  y1="139" x2="60"  y2="200" stroke="#f87171" stroke-width="1"/>
+  <line x1="130" y1="139" x2="130" y2="200" stroke="#f87171" stroke-width="1"/>
+  <line x1="200" y1="139" x2="200" y2="200" stroke="#f87171" stroke-width="1"/>
+  <line x1="260" y1="141" x2="260" y2="200" stroke="#f87171" stroke-width="1"/>
+  <line x1="320" y1="141" x2="320" y2="200" stroke="#f87171" stroke-width="1"/>
+
+  <!-- Wire from ESP GND to DR GND rail -->
+  <line x1="350" y1="200" x2="420" y2="600" stroke="#f87171" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Wire from D2 → DR L1 -->
+  <line x1="60"  y1="65" x2="60"  y2="80"  stroke="#fbbf24" stroke-width="1"/>
+  <line x1="130" y1="65" x2="130" y2="80"  stroke="#fbbf24" stroke-width="1"/>
+  <line x1="200" y1="65" x2="200" y2="80"  stroke="#fbbf24" stroke-width="1"/>
+  <!-- Labels at top entry -->
+  <text x="60"  y="63" text-anchor="middle" font-size="8" fill="#fbbf24">←D2</text>
+  <text x="130" y="63" text-anchor="middle" font-size="8" fill="#fbbf24">←D4</text>
+  <text x="200" y="63" text-anchor="middle" font-size="8" fill="#fbbf24">←D5</text>
+  <text x="260" y="63" text-anchor="middle" font-size="8" fill="#60a5fa">←D26</text>
+  <text x="320" y="63" text-anchor="middle" font-size="8" fill="#60a5fa">←D27</text>
+  <line x1="260" y1="65" x2="260" y2="80"  stroke="#60a5fa" stroke-width="1"/>
+  <line x1="320" y1="65" x2="320" y2="80"  stroke="#60a5fa" stroke-width="1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- WORK ROOM 1 section -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="30" y="360" width="320" height="230" rx="6" fill="#0d2137" stroke="#334155" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="190" y="380" text-anchor="middle" font-size="13" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Work Room 1</text>
+
+  <g transform="translate(60,405)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D18</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(130,405)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D19</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(200,405)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L3</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D21</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(260,405)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D32</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(320,405)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D33</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+
+  <line x1="44" y1="480" x2="350" y2="480" stroke="#f87171" stroke-width="1.5"/>
+  <text x="190" y="495" text-anchor="middle" font-size="9" fill="#f87171">GND Rail</text>
+  <line x1="60"  y1="419" x2="60"  y2="480" stroke="#f87171" stroke-width="1"/>
+  <line x1="130" y1="419" x2="130" y2="480" stroke="#f87171" stroke-width="1"/>
+  <line x1="200" y1="419" x2="200" y2="480" stroke="#f87171" stroke-width="1"/>
+  <line x1="260" y1="421" x2="260" y2="480" stroke="#f87171" stroke-width="1"/>
+  <line x1="320" y1="421" x2="320" y2="480" stroke="#f87171" stroke-width="1"/>
+
+  <text x="60"  y="344" text-anchor="middle" font-size="8" fill="#fbbf24">←D18</text>
+  <text x="130" y="344" text-anchor="middle" font-size="8" fill="#fbbf24">←D19</text>
+  <text x="200" y="344" text-anchor="middle" font-size="8" fill="#fbbf24">←D21</text>
+  <text x="260" y="344" text-anchor="middle" font-size="8" fill="#60a5fa">←D32</text>
+  <text x="320" y="344" text-anchor="middle" font-size="8" fill="#60a5fa">←D33</text>
+  <line x1="60"  y1="346" x2="60"  y2="360" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="130" y1="346" x2="130" y2="360" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="200" y1="346" x2="200" y2="360" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="260" y1="346" x2="260" y2="360" stroke="#60a5fa" stroke-width="1"/>
+  <line x1="320" y1="346" x2="320" y2="360" stroke="#60a5fa" stroke-width="1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- WORK ROOM 2 section (right side) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="700" y="80" width="380" height="500" rx="6" fill="#0d2137" stroke="#334155" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <text x="890" y="100" text-anchor="middle" font-size="13" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Work Room 2</text>
+
+  <!-- WR2 Light 1 -->
+  <g transform="translate(740,145)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D22</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(820,145)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D23</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(900,145)">
+    <circle r="14" fill="#1a1a2e" stroke="#fbbf24" stroke-width="2"/>
+    <circle r="7"  fill="#fbbf24" opacity="0.9"/>
+    <text y="28" text-anchor="middle" font-size="9" fill="#fbbf24">L3</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">15W · D25</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#fbbf24" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-14" stroke="#fbbf24" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(980,145)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F1</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D34</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(1060,145)">
+    <rect x="-16" y="-16" width="32" height="32" rx="6" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+    <text y="4" text-anchor="middle" font-size="14" fill="#60a5fa">⌀</text>
+    <text y="28" text-anchor="middle" font-size="9" fill="#60a5fa">F2</text>
+    <text y="38" text-anchor="middle" font-size="8" fill="#64748b">60W · D35</text>
+    <rect x="-5" y="-42" width="10" height="20" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+    <text x="0" y="-27" text-anchor="middle" font-size="7" fill="#94a3b8">220Ω</text>
+    <line x1="0" y1="-60" x2="0" y2="-42" stroke="#60a5fa" stroke-width="1.5"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#60a5fa" stroke-width="1.5"/>
+  </g>
+
+  <line x1="715" y1="220" x2="1080" y2="220" stroke="#f87171" stroke-width="1.5"/>
+  <text x="890" y="235" text-anchor="middle" font-size="9" fill="#f87171">GND Rail</text>
+  <line x1="740"  y1="159" x2="740"  y2="220" stroke="#f87171" stroke-width="1"/>
+  <line x1="820"  y1="159" x2="820"  y2="220" stroke="#f87171" stroke-width="1"/>
+  <line x1="900"  y1="159" x2="900"  y2="220" stroke="#f87171" stroke-width="1"/>
+  <line x1="980"  y1="161" x2="980"  y2="220" stroke="#f87171" stroke-width="1"/>
+  <line x1="1060" y1="161" x2="1060" y2="220" stroke="#f87171" stroke-width="1"/>
+
+  <!-- Wire from ESP D22–D35 to WR2 (right side connects at 604 → 700) -->
+  <line x1="604" y1="400" x2="700" y2="400" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="604" y1="420" x2="700" y2="420" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="604" y1="440" x2="700" y2="440" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="604" y1="460" x2="700" y2="460" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="604" y1="480" x2="700" y2="480" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="604" y1="500" x2="700" y2="500" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <text x="740"  y="82" text-anchor="middle" font-size="8" fill="#fbbf24">←D22</text>
+  <text x="820"  y="82" text-anchor="middle" font-size="8" fill="#fbbf24">←D23</text>
+  <text x="900"  y="82" text-anchor="middle" font-size="8" fill="#fbbf24">←D25</text>
+  <text x="980"  y="82" text-anchor="middle" font-size="8" fill="#60a5fa">←D34</text>
+  <text x="1060" y="82" text-anchor="middle" font-size="8" fill="#60a5fa">←D35</text>
+  <line x1="740"  y1="84" x2="740"  y2="95" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="820"  y1="84" x2="820"  y2="95" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="900"  y1="84" x2="900"  y2="95" stroke="#fbbf24" stroke-width="1"/>
+  <line x1="980"  y1="84" x2="980"  y2="95" stroke="#60a5fa" stroke-width="1"/>
+  <line x1="1060" y1="84" x2="1060" y2="95" stroke="#60a5fa" stroke-width="1"/>
+
+  <!-- ESP → WR2 GND dash -->
+  <line x1="420" y1="600" x2="700" y2="220" stroke="#f87171" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Legend -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="700" y="630" width="380" height="160" rx="6" fill="#0d1b2a" stroke="#334155" stroke-width="1"/>
+  <text x="890" y="650" text-anchor="middle" font-size="12" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">Legend</text>
+
+  <circle cx="730" cy="670" r="8" fill="#fbbf24" opacity="0.9"/>
+  <text x="746" y="674" font-size="11" fill="#e2e8f0">Light (LED, yellow) — 15W per device</text>
+
+  <rect x="722" y="685" width="16" height="16" rx="3" fill="#1a1a2e" stroke="#60a5fa" stroke-width="2"/>
+  <text x="746" y="697" font-size="11" fill="#e2e8f0">Fan (motor symbol) — 60W per device</text>
+
+  <rect x="723" y="704" width="14" height="10" rx="2" fill="#2d3748" stroke="#94a3b8" stroke-width="1"/>
+  <text x="746" y="715" font-size="11" fill="#e2e8f0">220Ω current-limiting resistor</text>
+
+  <line x1="724" y1="730" x2="738" y2="730" stroke="#fbbf24" stroke-width="2"/>
+  <text x="746" y="734" font-size="11" fill="#e2e8f0">Light signal wire (GPIO → device)</text>
+
+  <line x1="724" y1="748" x2="738" y2="748" stroke="#60a5fa" stroke-width="2"/>
+  <text x="746" y="752" font-size="11" fill="#e2e8f0">Fan signal wire (GPIO → device)</text>
+
+  <line x1="724" y1="766" x2="738" y2="766" stroke="#f87171" stroke-width="2"/>
+  <text x="746" y="770" font-size="11" fill="#e2e8f0">GND rail (common ground)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Pin map table -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <rect x="30" y="620" width="380" height="180" rx="6" fill="#0d1b2a" stroke="#334155" stroke-width="1"/>
+  <text x="220" y="640" text-anchor="middle" font-size="12" font-weight="bold" fill="#e2e8f0" font-family="sans-serif">GPIO Pin Map</text>
+
+  <text x="45"  y="660" font-size="10" fill="#94a3b8">PIN</text>
+  <text x="105" y="660" font-size="10" fill="#94a3b8">DEVICE</text>
+  <text x="260" y="660" font-size="10" fill="#94a3b8">ROOM</text>
+  <line x1="35" y1="664" x2="400" y2="664" stroke="#334155" stroke-width="1"/>
+
+  <text x="45"  y="678" font-size="10" fill="#fbbf24">D2</text><text x="105" y="678" font-size="10" fill="#e2e8f0">Light 1</text><text x="260" y="678" font-size="10" fill="#94a3b8">Drawing Room</text>
+  <text x="45"  y="692" font-size="10" fill="#fbbf24">D4</text><text x="105" y="692" font-size="10" fill="#e2e8f0">Light 2</text><text x="260" y="692" font-size="10" fill="#94a3b8">Drawing Room</text>
+  <text x="45"  y="706" font-size="10" fill="#fbbf24">D5</text><text x="105" y="706" font-size="10" fill="#e2e8f0">Light 3</text><text x="260" y="706" font-size="10" fill="#94a3b8">Drawing Room</text>
+  <text x="45"  y="720" font-size="10" fill="#60a5fa">D26</text><text x="105" y="720" font-size="10" fill="#e2e8f0">Fan 1</text><text x="260" y="720" font-size="10" fill="#94a3b8">Drawing Room</text>
+  <text x="45"  y="734" font-size="10" fill="#60a5fa">D27</text><text x="105" y="734" font-size="10" fill="#e2e8f0">Fan 2</text><text x="260" y="734" font-size="10" fill="#94a3b8">Drawing Room</text>
+  <text x="45"  y="748" font-size="10" fill="#fbbf24">D18</text><text x="105" y="748" font-size="10" fill="#e2e8f0">Light 1</text><text x="260" y="748" font-size="10" fill="#94a3b8">Work Room 1</text>
+  <text x="45"  y="762" font-size="10" fill="#fbbf24">D19</text><text x="105" y="762" font-size="10" fill="#e2e8f0">Light 2</text><text x="260" y="762" font-size="10" fill="#94a3b8">Work Room 1</text>
+  <text x="45"  y="776" font-size="10" fill="#fbbf24">D21</text><text x="105" y="776" font-size="10" fill="#e2e8f0">Light 3</text><text x="260" y="776" font-size="10" fill="#94a3b8">Work Room 1</text>
+  <text x="220" y="678" font-size="10" fill="#60a5fa">D32</text><text x="280" y="678" font-size="10" fill="#e2e8f0">Fan 1</text>
+  <text x="220" y="692" font-size="10" fill="#60a5fa">D33</text><text x="280" y="692" font-size="10" fill="#e2e8f0">Fan 2  · Work Room 1</text>
+  <text x="220" y="706" font-size="10" fill="#fbbf24">D22</text><text x="280" y="706" font-size="10" fill="#e2e8f0">Light 1</text>
+  <text x="220" y="720" font-size="10" fill="#fbbf24">D23</text><text x="280" y="720" font-size="10" fill="#e2e8f0">Light 2 · Work Room 2</text>
+  <text x="220" y="734" font-size="10" fill="#fbbf24">D25</text><text x="280" y="734" font-size="10" fill="#e2e8f0">Light 3</text>
+  <text x="220" y="748" font-size="10" fill="#60a5fa">D34</text><text x="280" y="748" font-size="10" fill="#e2e8f0">Fan 1  · Work Room 2</text>
+  <text x="220" y="762" font-size="10" fill="#60a5fa">D35</text><text x="280" y="762" font-size="10" fill="#e2e8f0">Fan 2</text>
+
+  <!-- Footer -->
+  <text x="550" y="808" text-anchor="middle" font-size="10" fill="#475569" font-family="sans-serif">
+    Power Monitor · ESP32-based Office Device Simulator · 3 rooms · 9 lights · 6 fans · 15 devices total
+  </text>
+
+</svg>
