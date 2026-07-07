@@ -9,6 +9,7 @@ interface Props {
 }
 // Receives a room ID and its list of devices as props.
 
+// Receives a room ID and its list of devices as props.
 function RoomCard({ room, devices }: { room: RoomId; devices: Device[] }) {
   const roomDevices = devices.filter((d) => d.room === room)
   const fans = roomDevices.filter((d) => d.device_type === 'fan')
